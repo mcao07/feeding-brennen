@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
 import { handleError } from '@/lib/errors';
-import { RESTAURANT_COLUMNS, toRestaurant } from '@/lib/types';
+import { RESTAURANT_WITH_TOTALS, toRestaurant } from '@/lib/types';
 import { readJsonBody, validateRestaurantBody } from '@/lib/validation';
 
 /**
@@ -11,7 +11,7 @@ import { readJsonBody, validateRestaurantBody } from '@/lib/validation';
 export async function GET() {
   try {
     const { rows } = await pool.query(
-      `SELECT ${RESTAURANT_COLUMNS} FROM restaurants ORDER BY created_at DESC`
+      `${RESTAURANT_WITH_TOTALS} GROUP BY r.id ORDER BY r.created_at DESC`
     );
     // Map every row - raw rows don't match the contract (NUMERIC comes back
     // as a string, timestamps as Date objects). See lib/types.ts.
@@ -28,11 +28,19 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const input = validateRestaurantBody(await readJsonBody(req));
-    const { rows } = await pool.query(
+    const inserted = await pool.query(
       `INSERT INTO restaurants (name, cuisine, address, rating)
        VALUES ($1, $2, $3, $4)
-       RETURNING ${RESTAURANT_COLUMNS}`,
+       RETURNING id`,
       [input.name, input.cuisine, input.address, input.rating]
+    );
+
+    // A second trip so there is one query shape for "a restaurant with its
+    // totals" instead of a RETURNING clause that has to fake the join. Writes
+    // are not the hot path here.
+    const { rows } = await pool.query(
+      `${RESTAURANT_WITH_TOTALS} WHERE r.id = $1 GROUP BY r.id`,
+      [inserted.rows[0].id]
     );
 
     return NextResponse.json(toRestaurant(rows[0]), { status: 201 });
