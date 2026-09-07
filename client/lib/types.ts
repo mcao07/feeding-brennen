@@ -72,6 +72,14 @@ function dateOnly(value: unknown): string {
   return `${value.getFullYear()}-${month}-${day}`;
 }
 
+/**
+ * The columns every restaurant query selects or returns. Named explicitly so
+ * `created_at` comes back labelled `createdAt`, which is what `toRestaurant()`
+ * reads and what the API contract promises. Use it in SELECT and RETURNING.
+ */
+export const RESTAURANT_COLUMNS =
+  'id, name, cuisine, address, rating, created_at AS "createdAt"';
+
 /** Convert a `restaurants` row into the shape the API returns. */
 export function toRestaurant(row: Record<string, unknown>): Restaurant {
   return {
