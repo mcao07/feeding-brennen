@@ -11,7 +11,7 @@ import { readJsonBody, validateRestaurantBody } from '@/lib/validation';
 export async function GET() {
   try {
     const { rows } = await pool.query(
-      `${RESTAURANT_WITH_TOTALS} GROUP BY r.id ORDER BY r.created_at DESC`
+      `${RESTAURANT_WITH_TOTALS} GROUP BY r.id ORDER BY r.created_at DESC, r.id DESC`
     );
     // Map every row - raw rows don't match the contract (NUMERIC comes back
     // as a string, timestamps as Date objects). See lib/types.ts.
