@@ -36,6 +36,17 @@ export interface Restaurant {
   createdAt: string;
 }
 
+/**
+ * What a client sends to create or replace a restaurant. No id or createdAt:
+ * the server assigns those.
+ */
+export interface RestaurantInput {
+  name: string;
+  cuisine: string | null;
+  address: string | null;
+  rating: number | null;
+}
+
 export interface Visit {
   id: number;
   restaurantId: number;

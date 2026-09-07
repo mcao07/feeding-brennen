@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { deleteRestaurant } from '@/lib/apiClient';
+import { ApiError, deleteRestaurant } from '@/lib/apiClient';
 
 /**
  * Delete button for one restaurant row. Confirms first because the delete
@@ -14,7 +14,7 @@ export default function DeleteRestaurantButton({ id, name }: { id: number; name:
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function remove() {
+  async function confirmAndDelete() {
     if (!window.confirm(`Delete ${name}? Its visit history goes with it.`)) return;
     setDeleting(true);
     setError(null);
@@ -22,7 +22,15 @@ export default function DeleteRestaurantButton({ id, name }: { id: number; name:
       await deleteRestaurant(id);
       router.refresh();
     } catch (err) {
+      // A 404 means someone else already deleted it, which is the outcome the
+      // click asked for. Refreshing drops the stale row instead of blaming it.
+      if (err instanceof ApiError && err.status === 404) {
+        router.refresh();
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Something went wrong');
+      // Only on failure. After a successful delete the button stays disabled
+      // on purpose, until the refreshed list unmounts the row.
       setDeleting(false);
     }
   }
@@ -32,7 +40,7 @@ export default function DeleteRestaurantButton({ id, name }: { id: number; name:
       {error && <span className="text-xs text-red-600">{error}</span>}
       <button
         type="button"
-        onClick={remove}
+        onClick={confirmAndDelete}
         disabled={deleting}
         aria-label={`Delete ${name}`}
         title="Delete"

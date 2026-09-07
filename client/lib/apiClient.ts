@@ -8,8 +8,7 @@
  * The shapes these helpers return live in `lib/types.ts`, shared with the
  * handlers that produce them.
  */
-import type { Restaurant } from './types';
-import type { RestaurantInput } from './validation';
+import type { Restaurant, RestaurantInput } from './types';
 
 // We read a base URL from the environment because Server Components fetch on
 // the server, where relative URLs don't resolve - so we need an absolute origin.
@@ -52,6 +51,16 @@ export class ApiError extends Error {
 }
 
 /**
+ * Turn a failed response into an `ApiError` and throw it. Every write helper
+ * fails the same way, and a body that isn't JSON (a proxy's HTML error page,
+ * an empty 204) must not mask the status the caller needs to see.
+ */
+async function throwApiError(res: Response): Promise<never> {
+  const body = await res.json().catch(() => ({}));
+  throw new ApiError(body.error ?? `Request failed with ${res.status}`, res.status, body.field);
+}
+
+/**
  * Create a restaurant. Optional fields may be omitted; the server decides
  * what is valid and answers 400 with a message (and usually a field) if not.
  */
@@ -63,10 +72,7 @@ export async function createRestaurant(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(body.error ?? `Request failed with ${res.status}`, res.status, body.field);
-  }
+  if (!res.ok) return throwApiError(res);
   return res.json();
 }
 
@@ -76,8 +82,5 @@ export async function createRestaurant(
  */
 export async function deleteRestaurant(id: number): Promise<void> {
   const res = await fetch(`${API_URL}/api/restaurants/${id}`, { method: 'DELETE' });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(body.error ?? `Request failed with ${res.status}`, res.status);
-  }
+  if (!res.ok) await throwApiError(res);
 }

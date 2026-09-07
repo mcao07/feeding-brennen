@@ -1,23 +1,34 @@
 import { NextResponse } from 'next/server';
 
 /**
- * Errors the route handlers throw on purpose. `handleError()` turns each into
- * the matching HTTP status; anything else is a bug and becomes a 500.
+ * Base for the errors the route handlers throw on purpose. Each one carries
+ * its own status, so `handleError()` needs no lookup table mapping error
+ * classes to codes - adding an error type never touches the handler.
  */
-export class ValidationError extends Error {
-  readonly status = 400;
-  /** The body field the message is about, when there is one. The UI uses it
-   *  to place the message next to the right input. */
-  readonly field?: string;
-
-  constructor(message: string, field?: string) {
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    /** The body field the message is about, when there is one. The UI uses it
+     *  to place the message next to the right input. */
+    readonly field?: string
+  ) {
     super(message);
-    this.field = field;
   }
 }
 
-export class NotFoundError extends Error {
-  readonly status = 404;
+/** A body the client got wrong. 400, plus the offending field when known. */
+export class ValidationError extends HttpError {
+  constructor(message: string, field?: string) {
+    super(message, 400, field);
+  }
+}
+
+/** No such record. 404, and never about a single field. */
+export class NotFoundError extends HttpError {
+  constructor(message = 'Not found') {
+    super(message, 404);
+  }
 }
 
 /**
@@ -30,17 +41,15 @@ export class NotFoundError extends Error {
  *     return handleError(err);
  *   }
  *
- * Known errors carry their own status and a message safe to show the caller.
- * Everything else is logged server-side only and answered with a generic 500,
- * so stack traces and raw database errors never reach the response.
+ * An `HttpError` was thrown deliberately: it already knows its status and its
+ * message is safe to show the caller. Anything else is a bug, so it is logged
+ * server-side only and answered with a generic 500 - stack traces and raw
+ * database errors never reach the response.
  */
 export function handleError(err: unknown): NextResponse {
-  if (err instanceof ValidationError) {
+  if (err instanceof HttpError) {
     const body = err.field ? { error: err.message, field: err.field } : { error: err.message };
     return NextResponse.json(body, { status: err.status });
-  }
-  if (err instanceof NotFoundError) {
-    return NextResponse.json({ error: err.message }, { status: err.status });
   }
 
   console.error('Unhandled API error:', err);
