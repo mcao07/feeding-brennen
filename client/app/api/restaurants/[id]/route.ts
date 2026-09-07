@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
-import { handleError } from '@/lib/errors';
-import { toRestaurant } from '@/lib/types';
+import { handleError, NotFoundError } from '@/lib/errors';
+import { parseId } from '@/lib/validation';
+import { RESTAURANT_COLUMNS, toRestaurant } from '@/lib/types';
 
 type Params = { params: { id: string } };
 
@@ -11,13 +12,14 @@ type Params = { params: { id: string } };
  */
 export async function GET(_req: Request, { params }: Params) {
   try {
+    const id = parseId(params.id);
     const { rows } = await pool.query(
-      'SELECT * FROM restaurants WHERE id = $1',
-      [params.id]
+      `SELECT ${RESTAURANT_COLUMNS} FROM restaurants WHERE id = $1`,
+      [id]
     );
 
     if (rows.length === 0) {
-      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
+      throw new NotFoundError('Restaurant not found');
     }
 
     return NextResponse.json(toRestaurant(rows[0]));
@@ -39,15 +41,23 @@ export async function PUT(_req: Request, _ctx: Params) {
 
 /**
  * DELETE /api/restaurants/:id
- * Delete a restaurant.
- *
- * TODO (A2): implement. Delete the row matching :id and return 204 (or 404
- * if it doesn't exist).
- *
- * Worth noticing: the migration already made a call about what happens to that
- * restaurant's visits. Go read it. If you disagree with it, say so in your
- * write-up.
+ * Delete a restaurant and, via ON DELETE CASCADE in the migration, its visits.
+ * Returns 204 with no body, or 404 if no row matched.
  */
-export async function DELETE(_req: Request, _ctx: Params) {
-  return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
+export async function DELETE(_req: Request, { params }: Params) {
+  try {
+    const id = parseId(params.id);
+    const { rows } = await pool.query(
+      'DELETE FROM restaurants WHERE id = $1 RETURNING id',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      throw new NotFoundError('Restaurant not found');
+    }
+
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    return handleError(err);
+  }
 }
