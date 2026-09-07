@@ -1,4 +1,5 @@
 import { NotFoundError, ValidationError } from './errors';
+import type { RestaurantInput } from './types';
 
 /** Largest value a Postgres `integer` (the SERIAL id column) can hold. */
 const MAX_POSTGRES_INTEGER = 2147483647;
@@ -7,25 +8,21 @@ const MAX_POSTGRES_INTEGER = 2147483647;
  * Parse a `:id` path segment into a positive integer.
  *
  * Anything else (`abc`, `-1`, `1.5`, `0`, `01`) is a 404, not a 400: the
- * contract in CHALLENGE.md says there is no such restaurant, and that is the
+ * contract in CHALLENGE.md says there is no such record, and that is the
  * answer we give. Checking here keeps malformed ids out of Postgres, which
  * would otherwise reject them with a 500. The upper bound matters too: an id
  * past the integer limit overflows inside Postgres and also surfaces as a 500.
- * Leading zeros are rejected so each restaurant has exactly one URL.
+ * Leading zeros are rejected so each record has exactly one URL.
+ *
+ * The caller passes `notFoundMessage` because this function knows nothing
+ * about which resource the id belongs to, and the message the client sees
+ * must name it.
  */
-export function parseId(raw: string): number {
+export function parseId(raw: string, notFoundMessage: string): number {
   if (!/^[1-9]\d*$/.test(raw) || Number(raw) > MAX_POSTGRES_INTEGER) {
-    throw new NotFoundError('Restaurant not found');
+    throw new NotFoundError(notFoundMessage);
   }
   return Number(raw);
-}
-
-/** The fields a client may set on a restaurant, already checked and cleaned. */
-export interface RestaurantInput {
-  name: string;
-  cuisine: string | null;
-  address: string | null;
-  rating: number | null;
 }
 
 /**
@@ -56,7 +53,7 @@ export function validateRestaurantBody(body: unknown): RestaurantInput {
 
   const name = fields.name;
   if (typeof name !== 'string' || name.trim() === '') {
-    throw new ValidationError('name is required and must be a non-empty string');
+    throw new ValidationError('name is required and must be a non-empty string', 'name');
   }
 
   const cuisine = optionalString(fields.cuisine, 'cuisine');
@@ -67,7 +64,7 @@ export function validateRestaurantBody(body: unknown): RestaurantInput {
   if (fields.rating !== undefined && fields.rating !== null) {
     const value = fields.rating;
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 5) {
-      throw new ValidationError('rating must be a number between 0 and 5');
+      throw new ValidationError('rating must be a number between 0 and 5', 'rating');
     }
     rating = value;
   }
@@ -75,10 +72,16 @@ export function validateRestaurantBody(body: unknown): RestaurantInput {
   return { name: name.trim(), cuisine, address, rating };
 }
 
+/**
+ * An optional text field, trimmed. Absent, null, and whitespace-only all mean
+ * "not given" and become null, so a stored value is never blank padding - the
+ * same rule `name` follows, minus the requirement to be there.
+ */
 function optionalString(value: unknown, field: string): string | null {
   if (value === undefined || value === null) return null;
   if (typeof value !== 'string') {
-    throw new ValidationError(`${field} must be a string`);
+    throw new ValidationError(`${field} must be a string`, field);
   }
-  return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
 }

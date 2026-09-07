@@ -12,7 +12,7 @@ type Params = { params: { id: string } };
  */
 export async function GET(_req: Request, { params }: Params) {
   try {
-    const id = parseId(params.id);
+    const id = parseId(params.id, 'Restaurant not found');
     const { rows } = await pool.query(
       `SELECT ${RESTAURANT_COLUMNS} FROM restaurants WHERE id = $1`,
       [id]
@@ -35,7 +35,7 @@ export async function GET(_req: Request, { params }: Params) {
  */
 export async function PUT(req: Request, { params }: Params) {
   try {
-    const id = parseId(params.id);
+    const id = parseId(params.id, 'Restaurant not found');
     const input = validateRestaurantBody(await readJsonBody(req));
     const { rows } = await pool.query(
       `UPDATE restaurants
@@ -62,7 +62,7 @@ export async function PUT(req: Request, { params }: Params) {
  */
 export async function DELETE(_req: Request, { params }: Params) {
   try {
-    const id = parseId(params.id);
+    const id = parseId(params.id, 'Restaurant not found');
     const { rows } = await pool.query(
       'DELETE FROM restaurants WHERE id = $1 RETURNING id',
       [id]
