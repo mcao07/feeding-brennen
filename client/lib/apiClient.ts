@@ -9,6 +9,7 @@
  * handlers that produce them.
  */
 import type { Restaurant } from './types';
+import type { RestaurantInput } from './validation';
 
 // We read a base URL from the environment because Server Components fetch on
 // the server, where relative URLs don't resolve - so we need an absolute origin.
@@ -33,5 +34,38 @@ export async function getRestaurants(): Promise<Restaurant[]> {
  */
 export async function getRestaurant(id: number | string): Promise<Restaurant> {
   const res = await fetch(`${API_URL}/api/restaurants/${id}`, { cache: 'no-store' });
+  return res.json();
+}
+
+/**
+ * A non-2xx answer from the API. `field` is set when the server tied the
+ * message to one body field, so a form can show it next to that input.
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly field?: string
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Create a restaurant. Optional fields may be omitted; the server decides
+ * what is valid and answers 400 with a message (and usually a field) if not.
+ */
+export async function createRestaurant(
+  input: Partial<RestaurantInput> & { name: string }
+): Promise<Restaurant> {
+  const res = await fetch(`${API_URL}/api/restaurants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(body.error ?? `Request failed with ${res.status}`, res.status, body.field);
+  }
   return res.json();
 }

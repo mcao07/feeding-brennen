@@ -6,6 +6,14 @@ import { NextResponse } from 'next/server';
  */
 export class ValidationError extends Error {
   readonly status = 400;
+  /** The body field the message is about, when there is one. The UI uses it
+   *  to place the message next to the right input. */
+  readonly field?: string;
+
+  constructor(message: string, field?: string) {
+    super(message);
+    this.field = field;
+  }
 }
 
 export class NotFoundError extends Error {
@@ -27,7 +35,11 @@ export class NotFoundError extends Error {
  * so stack traces and raw database errors never reach the response.
  */
 export function handleError(err: unknown): NextResponse {
-  if (err instanceof ValidationError || err instanceof NotFoundError) {
+  if (err instanceof ValidationError) {
+    const body = err.field ? { error: err.message, field: err.field } : { error: err.message };
+    return NextResponse.json(body, { status: err.status });
+  }
+  if (err instanceof NotFoundError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
 

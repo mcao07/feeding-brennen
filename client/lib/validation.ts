@@ -56,7 +56,7 @@ export function validateRestaurantBody(body: unknown): RestaurantInput {
 
   const name = fields.name;
   if (typeof name !== 'string' || name.trim() === '') {
-    throw new ValidationError('name is required and must be a non-empty string');
+    throw new ValidationError('name is required and must be a non-empty string', 'name');
   }
 
   const cuisine = optionalString(fields.cuisine, 'cuisine');
@@ -67,7 +67,7 @@ export function validateRestaurantBody(body: unknown): RestaurantInput {
   if (fields.rating !== undefined && fields.rating !== null) {
     const value = fields.rating;
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 5) {
-      throw new ValidationError('rating must be a number between 0 and 5');
+      throw new ValidationError('rating must be a number between 0 and 5', 'rating');
     }
     rating = value;
   }
@@ -78,7 +78,7 @@ export function validateRestaurantBody(body: unknown): RestaurantInput {
 function optionalString(value: unknown, field: string): string | null {
   if (value === undefined || value === null) return null;
   if (typeof value !== 'string') {
-    throw new ValidationError(`${field} must be a string`);
+    throw new ValidationError(`${field} must be a string`, field);
   }
   return value;
 }

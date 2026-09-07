@@ -1,4 +1,5 @@
 import { getRestaurants } from '@/lib/apiClient';
+import AddRestaurantModal from './components/AddRestaurantModal';
 
 // Server component. Fetches restaurants on each request and renders a plain
 // list. There is no loading state, no empty state, and no error handling: if
@@ -8,7 +9,10 @@ export default async function HomePage() {
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-medium">Restaurants</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-medium">Restaurants</h2>
+        <AddRestaurantModal />
+      </div>
       <ul className="space-y-3">
         {restaurants.map((restaurant) => (
           <li
