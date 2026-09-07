@@ -5,17 +5,17 @@ import { useRouter } from 'next/navigation';
 import { ApiError, deleteRestaurant } from '@/lib/apiClient';
 
 /**
- * Delete button for one restaurant row. Confirms first because the delete
- * also removes the restaurant's visit history (ON DELETE CASCADE), then
- * refreshes the server-rendered list so the row disappears.
+ * Delete button for one restaurant row. One click deletes the restaurant
+ * and, through ON DELETE CASCADE, its visit history, then refreshes the
+ * server-rendered list so the row disappears. No confirmation: browsers
+ * can suppress window.confirm, and an in-page guard is a later refinement.
  */
 export default function DeleteRestaurantButton({ id, name }: { id: number; name: string }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function confirmAndDelete() {
-    if (!window.confirm(`Delete ${name}? Its visit history goes with it.`)) return;
+  async function deleteAndRefresh() {
     setDeleting(true);
     setError(null);
     try {
@@ -40,7 +40,7 @@ export default function DeleteRestaurantButton({ id, name }: { id: number; name:
       {error && <span className="text-xs text-red-600">{error}</span>}
       <button
         type="button"
-        onClick={confirmAndDelete}
+        onClick={deleteAndRefresh}
         disabled={deleting}
         aria-label={`Delete ${name}`}
         title="Delete"

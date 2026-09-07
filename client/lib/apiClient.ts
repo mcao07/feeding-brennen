@@ -17,26 +17,6 @@ export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 /**
- * Fetch every restaurant from the API.
- *
- * NOTE: this is a bare fetch with no error handling. It does not check the
- * response status and it does not catch network failures - callers get whatever
- * `res.json()` produces, including on a 500.
- */
-export async function getRestaurants(): Promise<Restaurant[]> {
-  const res = await fetch(`${API_URL}/api/restaurants`, { cache: 'no-store' });
-  return res.json();
-}
-
-/**
- * Fetch a single restaurant by id.
- */
-export async function getRestaurant(id: number | string): Promise<Restaurant> {
-  const res = await fetch(`${API_URL}/api/restaurants/${id}`, { cache: 'no-store' });
-  return res.json();
-}
-
-/**
  * A non-2xx answer from the API. `field` is set when the server tied the
  * message to one body field, so a form can show it next to that input.
  */
@@ -58,6 +38,20 @@ export class ApiError extends Error {
 async function throwApiError(res: Response): Promise<never> {
   const body = await res.json().catch(() => ({}));
   throw new ApiError(body.error ?? `Request failed with ${res.status}`, res.status, body.field);
+}
+
+/** Every restaurant. Throws ApiError on a non-2xx answer like every helper here. */
+export async function getRestaurants(): Promise<Restaurant[]> {
+  const res = await fetch(`${API_URL}/api/restaurants`, { cache: 'no-store' });
+  if (!res.ok) return throwApiError(res);
+  return res.json();
+}
+
+/** One restaurant by id. Throws ApiError (status 404) when it does not exist. */
+export async function getRestaurant(id: number | string): Promise<Restaurant> {
+  const res = await fetch(`${API_URL}/api/restaurants/${id}`, { cache: 'no-store' });
+  if (!res.ok) return throwApiError(res);
+  return res.json();
 }
 
 /**

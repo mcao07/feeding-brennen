@@ -1,27 +1,41 @@
 import { NotFoundError, ValidationError } from './errors';
-import type { RestaurantInput } from './types';
+import type { RestaurantInput, VisitInput } from './types';
 
 /** Largest value a Postgres `integer` (the SERIAL id column) can hold. */
 const MAX_POSTGRES_INTEGER = 2147483647;
 
+/** Largest value the `NUMERIC(10, 2)` amountSpent column can hold. */
+const MAX_AMOUNT_SPENT = 99999999.99;
+
 /**
- * Parse a `:id` path segment into a positive integer.
- *
- * Anything else (`abc`, `-1`, `1.5`, `0`, `01`) is a 404, not a 400: the
- * contract in CHALLENGE.md says there is no such record, and that is the
- * answer we give. Checking here keeps malformed ids out of Postgres, which
- * would otherwise reject them with a 500. The upper bound matters too: an id
- * past the integer limit overflows inside Postgres and also surfaces as a 500.
- * Leading zeros are rejected so each record has exactly one URL.
- *
- * The caller passes `notFoundMessage` because this function knows nothing
- * about which resource the id belongs to, and the message the client sees
- * must name it.
+ * The `:id` segment of a restaurant URL, or a 404. Anything that is not a
+ * positive integer (`abc`, `-1`, `1.5`, `0`, `01`) is a 404 rather than a
+ * 400: the contract in CHALLENGE.md says there is no such restaurant, and
+ * that is the answer we give.
  */
-export function parseId(raw: string, notFoundMessage: string): number {
-  if (!/^[1-9]\d*$/.test(raw) || Number(raw) > MAX_POSTGRES_INTEGER) {
-    throw new NotFoundError(notFoundMessage);
-  }
+export function parseRestaurantId(raw: string): number {
+  const id = parsePositiveInteger(raw);
+  if (id === null) throw new NotFoundError('Restaurant not found');
+  return id;
+}
+
+/** The `:visitId` segment of a visit URL, or a 404. Same rules as above. */
+export function parseVisitId(raw: string): number {
+  const id = parsePositiveInteger(raw);
+  if (id === null) throw new NotFoundError('Visit not found');
+  return id;
+}
+
+/**
+ * A positive integer Postgres can hold as `integer`, or null.
+ *
+ * Checking the shape here keeps malformed ids out of Postgres, which would
+ * otherwise reject them with a 500. The upper bound matters too: an id past
+ * the integer limit overflows inside Postgres and also surfaces as a 500.
+ * Leading zeros are rejected so each record has exactly one URL.
+ */
+function parsePositiveInteger(raw: string): number | null {
+  if (!/^[1-9]\d*$/.test(raw) || Number(raw) > MAX_POSTGRES_INTEGER) return null;
   return Number(raw);
 }
 
@@ -84,4 +98,57 @@ function optionalString(value: unknown, field: string): string | null {
   }
   const trimmed = value.trim();
   return trimmed === '' ? null : trimmed;
+}
+
+/**
+ * Check a visit body and return only the fields we accept, typed.
+ *
+ * `date` must be a real calendar day written YYYY-MM-DD; it is not compared to
+ * "today" because the server's today and the user's can differ by a day.
+ * `amountSpent` is required and capped at what the column can store, so an
+ * oversized number is a 400 here rather than a 500 inside Postgres.
+ */
+export function validateVisitBody(body: unknown): VisitInput {
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    throw new ValidationError('body must be a JSON object');
+  }
+  const fields = body as Record<string, unknown>;
+
+  const date = fields.date;
+  if (typeof date !== 'string' || !isCalendarDate(date)) {
+    throw new ValidationError('date is required and must be a real date in YYYY-MM-DD form', 'date');
+  }
+
+  const amountSpent = fields.amountSpent;
+  if (
+    typeof amountSpent !== 'number' ||
+    !Number.isFinite(amountSpent) ||
+    amountSpent < 0 ||
+    amountSpent > MAX_AMOUNT_SPENT
+  ) {
+    throw new ValidationError(
+      `amountSpent is required and must be a number between 0 and ${MAX_AMOUNT_SPENT}`,
+      'amountSpent'
+    );
+  }
+
+  const notes = optionalString(fields.notes, 'notes');
+
+  return { date, amountSpent, notes };
+}
+
+/**
+ * True for "YYYY-MM-DD" naming a day that exists. The regex catches the
+ * shape; the round trip through Date catches 2026-02-30, which JavaScript
+ * would otherwise silently roll into March.
+ */
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
 }
