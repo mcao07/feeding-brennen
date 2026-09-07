@@ -1,6 +1,8 @@
 import { getRestaurants } from '@/lib/apiClient';
+import { formatUsd } from '@/lib/format';
 import AddRestaurantModal from './components/AddRestaurantModal';
 import DeleteRestaurantButton from './components/DeleteRestaurantButton';
+import VisitsPanel from './components/VisitsPanel';
 
 // Server component. Fetches restaurants on each request and renders a plain
 // list. There is no loading state, no empty state, and no error handling: if
@@ -26,15 +28,26 @@ export default async function HomePage() {
                 <span className="text-sm text-gray-500">
                   {restaurant.rating}★
                 </span>
+                <span className="text-sm text-gray-500">{describeSpend(restaurant)}</span>
                 <DeleteRestaurantButton id={restaurant.id} name={restaurant.name} />
               </div>
             </div>
             <div className="mt-1 text-sm text-gray-600">
               {restaurant.cuisine} · {restaurant.address}
             </div>
+            <VisitsPanel restaurantId={restaurant.id} />
           </li>
         ))}
       </ul>
     </div>
   );
+}
+
+/**
+ * The row's spend summary. A restaurant with no visits says so rather than
+ * showing $0.00, which would read as a visit that cost nothing.
+ */
+function describeSpend({ visitCount, totalSpent }: { visitCount: number; totalSpent: number }) {
+  if (visitCount === 0) return 'No visits yet';
+  return `${formatUsd(totalSpent)} across ${visitCount} ${visitCount === 1 ? 'visit' : 'visits'}`;
 }
