@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
 import { handleError, NotFoundError } from '@/lib/errors';
-import { parseId } from '@/lib/validation';
+import { parseRestaurantId, parseVisitId } from '@/lib/validation';
 
 type Params = { params: { id: string; visitId: string } };
 
@@ -13,8 +13,8 @@ type Params = { params: { id: string; visitId: string } };
  */
 export async function DELETE(_req: Request, { params }: Params) {
   try {
-    const restaurantId = parseId(params.id, 'Restaurant not found');
-    const visitId = parseId(params.visitId, 'Visit not found');
+    const restaurantId = parseRestaurantId(params.id);
+    const visitId = parseVisitId(params.visitId);
     const { rows } = await pool.query(
       'DELETE FROM visits WHERE id = $1 AND "restaurantId" = $2 RETURNING id',
       [visitId, restaurantId]

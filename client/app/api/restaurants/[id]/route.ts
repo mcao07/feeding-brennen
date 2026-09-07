@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
 import { handleError, NotFoundError } from '@/lib/errors';
-import { parseId, readJsonBody, validateRestaurantBody } from '@/lib/validation';
+import { parseRestaurantId, readJsonBody, validateRestaurantBody } from '@/lib/validation';
 import { RESTAURANT_COLUMNS, toRestaurant } from '@/lib/types';
 
 type Params = { params: { id: string } };
@@ -12,7 +12,7 @@ type Params = { params: { id: string } };
  */
 export async function GET(_req: Request, { params }: Params) {
   try {
-    const id = parseId(params.id, 'Restaurant not found');
+    const id = parseRestaurantId(params.id);
     const { rows } = await pool.query(
       `SELECT ${RESTAURANT_COLUMNS} FROM restaurants WHERE id = $1`,
       [id]
@@ -35,7 +35,7 @@ export async function GET(_req: Request, { params }: Params) {
  */
 export async function PUT(req: Request, { params }: Params) {
   try {
-    const id = parseId(params.id, 'Restaurant not found');
+    const id = parseRestaurantId(params.id);
     const input = validateRestaurantBody(await readJsonBody(req));
     const { rows } = await pool.query(
       `UPDATE restaurants
@@ -62,7 +62,7 @@ export async function PUT(req: Request, { params }: Params) {
  */
 export async function DELETE(_req: Request, { params }: Params) {
   try {
-    const id = parseId(params.id, 'Restaurant not found');
+    const id = parseRestaurantId(params.id);
     const { rows } = await pool.query(
       'DELETE FROM restaurants WHERE id = $1 RETURNING id',
       [id]

@@ -8,23 +8,34 @@ const MAX_POSTGRES_INTEGER = 2147483647;
 const MAX_AMOUNT_SPENT = 99999999.99;
 
 /**
- * Parse a `:id` path segment into a positive integer.
- *
- * Anything else (`abc`, `-1`, `1.5`, `0`, `01`) is a 404, not a 400: the
- * contract in CHALLENGE.md says there is no such record, and that is the
- * answer we give. Checking here keeps malformed ids out of Postgres, which
- * would otherwise reject them with a 500. The upper bound matters too: an id
- * past the integer limit overflows inside Postgres and also surfaces as a 500.
- * Leading zeros are rejected so each record has exactly one URL.
- *
- * The caller passes `notFoundMessage` because this function knows nothing
- * about which resource the id belongs to, and the message the client sees
- * must name it.
+ * The `:id` segment of a restaurant URL, or a 404. Anything that is not a
+ * positive integer (`abc`, `-1`, `1.5`, `0`, `01`) is a 404 rather than a
+ * 400: the contract in CHALLENGE.md says there is no such restaurant, and
+ * that is the answer we give.
  */
-export function parseId(raw: string, notFoundMessage: string): number {
-  if (!/^[1-9]\d*$/.test(raw) || Number(raw) > MAX_POSTGRES_INTEGER) {
-    throw new NotFoundError(notFoundMessage);
-  }
+export function parseRestaurantId(raw: string): number {
+  const id = parsePositiveInteger(raw);
+  if (id === null) throw new NotFoundError('Restaurant not found');
+  return id;
+}
+
+/** The `:visitId` segment of a visit URL, or a 404. Same rules as above. */
+export function parseVisitId(raw: string): number {
+  const id = parsePositiveInteger(raw);
+  if (id === null) throw new NotFoundError('Visit not found');
+  return id;
+}
+
+/**
+ * A positive integer Postgres can hold as `integer`, or null.
+ *
+ * Checking the shape here keeps malformed ids out of Postgres, which would
+ * otherwise reject them with a 500. The upper bound matters too: an id past
+ * the integer limit overflows inside Postgres and also surfaces as a 500.
+ * Leading zeros are rejected so each record has exactly one URL.
+ */
+function parsePositiveInteger(raw: string): number | null {
+  if (!/^[1-9]\d*$/.test(raw) || Number(raw) > MAX_POSTGRES_INTEGER) return null;
   return Number(raw);
 }
 

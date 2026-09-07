@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
 import { handleError, NotFoundError } from '@/lib/errors';
 import { VISIT_COLUMNS, toVisit } from '@/lib/types';
-import { parseId, readJsonBody, validateVisitBody } from '@/lib/validation';
+import { parseRestaurantId, readJsonBody, validateVisitBody } from '@/lib/validation';
 
 type Params = { params: { id: string } };
 
@@ -13,7 +13,7 @@ type Params = { params: { id: string } };
  */
 export async function GET(_req: Request, { params }: Params) {
   try {
-    const restaurantId = parseId(params.id, 'Restaurant not found');
+    const restaurantId = parseRestaurantId(params.id);
     await assertRestaurantExists(restaurantId);
     const { rows } = await pool.query(
       `SELECT ${VISIT_COLUMNS} FROM visits
@@ -35,7 +35,7 @@ export async function GET(_req: Request, { params }: Params) {
  */
 export async function POST(req: Request, { params }: Params) {
   try {
-    const restaurantId = parseId(params.id, 'Restaurant not found');
+    const restaurantId = parseRestaurantId(params.id);
     await assertRestaurantExists(restaurantId);
     const input = validateVisitBody(await readJsonBody(req));
     const { rows } = await pool.query(
