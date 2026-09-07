@@ -13,11 +13,13 @@ const FIELDS: {
   name: FieldName;
   label: string;
   hint: string;
-  /** Only to pick the on-screen keyboard. Every input is a text input, so the
-   *  server stays the one authority on what a value may be. */
+  /** Widget only. A date input is a calendar picker that emits YYYY-MM-DD,
+   *  the shape the API already requires; inputMode picks the on-screen
+   *  keyboard. Neither validates anything: the server stays the one authority. */
+  type?: 'date';
   inputMode?: 'decimal';
 }[] = [
-  { name: 'date', label: 'Date', hint: 'Required. YYYY-MM-DD, for example 2026-09-07.' },
+  { name: 'date', label: 'Date', hint: 'Required. Pick the day of the visit.', type: 'date' },
   {
     name: 'amountSpent',
     label: 'Amount spent',
@@ -121,7 +123,7 @@ export default function LogVisitModal({
                 <input
                   id={inputId}
                   name={field.name}
-                  type="text"
+                  type={field.type ?? 'text'}
                   inputMode={field.inputMode}
                   value={values[field.name]}
                   onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
