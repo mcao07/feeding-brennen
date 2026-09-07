@@ -36,6 +36,17 @@ export interface Restaurant {
   createdAt: string;
 }
 
+/**
+ * What a client sends to create or replace a restaurant. No id or createdAt:
+ * the server assigns those.
+ */
+export interface RestaurantInput {
+  name: string;
+  cuisine: string | null;
+  address: string | null;
+  rating: number | null;
+}
+
 export interface Visit {
   id: number;
   restaurantId: number;
@@ -45,6 +56,18 @@ export interface Visit {
   notes: string | null;
   /** ISO 8601 timestamp. */
   createdAt: string;
+}
+
+/**
+ * What a client sends to log a visit. No id, restaurantId, or createdAt: the
+ * restaurant comes from the URL and the server assigns the rest. amountSpent
+ * is required here even though the column is nullable, because a visit with
+ * no amount is useless to a spending tracker.
+ */
+export interface VisitInput {
+  date: string;
+  amountSpent: number;
+  notes: string | null;
 }
 
 // --- row mappers -------------------------------------------------------------
@@ -91,6 +114,14 @@ export function toRestaurant(row: Record<string, unknown>): Restaurant {
     createdAt: isoTimestamp(row.createdAt),
   };
 }
+
+/**
+ * The twin of `RESTAURANT_COLUMNS` for the visits table, which also spells
+ * its timestamp `created_at`. The camelCase columns are quoted because
+ * Postgres lowercases unquoted names.
+ */
+export const VISIT_COLUMNS =
+  'id, "restaurantId", date, "amountSpent", notes, created_at AS "createdAt"';
 
 /** Convert a `visits` row into the shape the API returns. */
 export function toVisit(row: Record<string, unknown>): Visit {

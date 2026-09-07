@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
 import { handleError, NotFoundError } from '@/lib/errors';
-import { parseId } from '@/lib/validation';
+import { parseRestaurantId, readJsonBody, validateRestaurantBody } from '@/lib/validation';
 import { RESTAURANT_COLUMNS, toRestaurant } from '@/lib/types';
 
 type Params = { params: { id: string } };
@@ -12,7 +12,7 @@ type Params = { params: { id: string } };
  */
 export async function GET(_req: Request, { params }: Params) {
   try {
-    const id = parseId(params.id);
+    const id = parseRestaurantId(params.id);
     const { rows } = await pool.query(
       `SELECT ${RESTAURANT_COLUMNS} FROM restaurants WHERE id = $1`,
       [id]
@@ -30,13 +30,29 @@ export async function GET(_req: Request, { params }: Params) {
 
 /**
  * PUT /api/restaurants/:id
- * Update an existing restaurant.
- *
- * TODO (A2): implement. Update the row matching :id and return the updated
- * record (or 404 if it doesn't exist). Validate the body the same way POST does.
+ * Replace every client-settable field on a restaurant. Returns 200 with the
+ * updated record, 404 if no row matched, 400 on a bad body.
  */
-export async function PUT(_req: Request, _ctx: Params) {
-  return NextResponse.json({ error: 'Not implemented' }, { status: 501 });
+export async function PUT(req: Request, { params }: Params) {
+  try {
+    const id = parseRestaurantId(params.id);
+    const input = validateRestaurantBody(await readJsonBody(req));
+    const { rows } = await pool.query(
+      `UPDATE restaurants
+       SET name = $1, cuisine = $2, address = $3, rating = $4
+       WHERE id = $5
+       RETURNING ${RESTAURANT_COLUMNS}`,
+      [input.name, input.cuisine, input.address, input.rating, id]
+    );
+
+    if (rows.length === 0) {
+      throw new NotFoundError('Restaurant not found');
+    }
+
+    return NextResponse.json(toRestaurant(rows[0]));
+  } catch (err) {
+    return handleError(err);
+  }
 }
 
 /**
@@ -46,7 +62,7 @@ export async function PUT(_req: Request, _ctx: Params) {
  */
 export async function DELETE(_req: Request, { params }: Params) {
   try {
-    const id = parseId(params.id);
+    const id = parseRestaurantId(params.id);
     const { rows } = await pool.query(
       'DELETE FROM restaurants WHERE id = $1 RETURNING id',
       [id]
