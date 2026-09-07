@@ -62,19 +62,17 @@ export function validateRestaurantBody(body: unknown): RestaurantInput {
   const cuisine = optionalString(fields.cuisine, 'cuisine');
   const address = optionalString(fields.address, 'address');
 
-  const rating = fields.rating;
-  if (rating !== undefined && rating !== null) {
-    if (typeof rating !== 'number' || !Number.isFinite(rating) || rating < 0 || rating > 5) {
+  // Absent or null means "not rated"; anything else must be a number 0-5.
+  let rating: number | null = null;
+  if (fields.rating !== undefined && fields.rating !== null) {
+    const value = fields.rating;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 5) {
       throw new ValidationError('rating must be a number between 0 and 5');
     }
+    rating = value;
   }
 
-  return {
-    name: name.trim(),
-    cuisine,
-    address,
-    rating: rating === undefined ? null : (rating as number | null),
-  };
+  return { name: name.trim(), cuisine, address, rating };
 }
 
 function optionalString(value: unknown, field: string): string | null {
