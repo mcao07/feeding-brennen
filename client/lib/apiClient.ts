@@ -69,3 +69,15 @@ export async function createRestaurant(
   }
   return res.json();
 }
+
+/**
+ * Delete a restaurant. Resolves on 204; throws ApiError on 404 or any other
+ * failure. The migration cascades, so the restaurant's visits go with it.
+ */
+export async function deleteRestaurant(id: number): Promise<void> {
+  const res = await fetch(`${API_URL}/api/restaurants/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(body.error ?? `Request failed with ${res.status}`, res.status);
+  }
+}

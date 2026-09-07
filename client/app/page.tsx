@@ -1,5 +1,6 @@
 import { getRestaurants } from '@/lib/apiClient';
 import AddRestaurantModal from './components/AddRestaurantModal';
+import DeleteRestaurantButton from './components/DeleteRestaurantButton';
 
 // Server component. Fetches restaurants on each request and renders a plain
 // list. There is no loading state, no empty state, and no error handling: if
@@ -21,9 +22,12 @@ export default async function HomePage() {
           >
             <div className="flex items-baseline justify-between">
               <span className="font-medium">{restaurant.name}</span>
-              <span className="text-sm text-gray-500">
-                {restaurant.rating}★
-              </span>
+              <div className="flex items-baseline gap-3">
+                <span className="text-sm text-gray-500">
+                  {restaurant.rating}★
+                </span>
+                <DeleteRestaurantButton id={restaurant.id} name={restaurant.name} />
+              </div>
             </div>
             <div className="mt-1 text-sm text-gray-600">
               {restaurant.cuisine} · {restaurant.address}
