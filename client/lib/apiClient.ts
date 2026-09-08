@@ -119,7 +119,7 @@ export async function deleteVisit(restaurantId: number, visitId: number): Promis
 
 /** Spend totals for every restaurant in one request, for the home page rows. */
 export async function getSpendByRestaurant(): Promise<RestaurantSpend[]> {
-  const res = await fetch(`${API_URL}/api/restaurants/total-spending`, { cache: 'no-store' });
+  const res = await fetch(`${API_URL}/api/restaurants/total-spending-and-visit-count`, { cache: 'no-store' });
   if (!res.ok) return throwApiError(res);
   return res.json();
 }

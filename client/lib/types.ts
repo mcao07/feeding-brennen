@@ -138,7 +138,7 @@ export function toVisit(row: Record<string, unknown>): Visit {
 /**
  * One restaurant's spend totals, computed from its visits on every read and
  * never stored, so they cannot drift from the visit rows. Served by
- * GET /api/restaurants/total-spending as a separate resource so the Part A
+ * GET /api/restaurants/total-spending-and-visit-count as a separate resource so the Part A
  * restaurant shape stays exactly as the contract shows it.
  */
 export interface RestaurantSpend {

@@ -4,7 +4,7 @@ import { handleError } from '@/lib/errors';
 import { RESTAURANT_SPEND_SELECT, toRestaurantSpend } from '@/lib/types';
 
 /**
- * GET /api/restaurants/total-spending
+ * GET /api/restaurants/total-spending-and-visit-count
  * Visit count and total spent for every restaurant, one row each, including
  * restaurants with no visits. A separate resource rather than two extra keys
  * on the restaurant shape, so the Part A contract stays exactly as written.
