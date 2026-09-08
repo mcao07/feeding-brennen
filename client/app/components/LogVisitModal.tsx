@@ -1,11 +1,11 @@
 'use client';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { ApiError, createRestaurant } from '@/lib/apiClient';
+import { ApiError, createVisit } from '@/lib/apiClient';
+import type { VisitInput } from '@/lib/types';
 
 /** What the inputs hold. Everything is a string until submit reshapes it. */
-const EMPTY_FORM = { name: '', cuisine: '', address: '', rating: '' };
+const EMPTY_FORM = { date: '', amountSpent: '', notes: '' };
 type FormValues = typeof EMPTY_FORM;
 type FieldName = keyof FormValues;
 
@@ -13,25 +13,37 @@ const FIELDS: {
   name: FieldName;
   label: string;
   hint: string;
-  /** Only to pick the on-screen keyboard. Every input is a text input, so the
-   *  server stays the one authority on what a value may be. */
+  /** Widget only. A date input is a calendar picker that emits YYYY-MM-DD,
+   *  the shape the API already requires; inputMode picks the on-screen
+   *  keyboard. Neither validates anything: the server stays the one authority. */
+  type?: 'date';
   inputMode?: 'decimal';
 }[] = [
-  { name: 'name', label: 'Name', hint: 'Required.' },
-  { name: 'cuisine', label: 'Cuisine', hint: 'Optional, for example Japanese.' },
-  { name: 'address', label: 'Address', hint: 'Optional.' },
-  { name: 'rating', label: 'Rating', hint: 'Optional, 0 to 5.', inputMode: 'decimal' },
+  { name: 'date', label: 'Date', hint: 'Required. Pick the day of the visit.', type: 'date' },
+  {
+    name: 'amountSpent',
+    label: 'Amount spent',
+    hint: 'Required. A number, for example 24.50.',
+    inputMode: 'decimal',
+  },
+  { name: 'notes', label: 'Notes', hint: 'Optional.' },
 ];
 
 /**
- * "Add restaurant" button and the modal it opens.
+ * The see-through "Log a visit" row and the modal it opens.
  *
- * The form has no validation rules of its own: the API is the one authority,
- * and each 400 names the field it is about, so this component only reshapes
- * the inputs and positions whatever message comes back.
+ * Like AddRestaurantModal, the form has no validation rules of its own: the
+ * API is the one authority, and each 400 names the field it is about. The two
+ * files stay separate copies of that pattern rather than sharing a form
+ * builder, which would be an abstraction over two examples.
  */
-export default function AddRestaurantModal() {
-  const router = useRouter();
+export default function LogVisitModal({
+  restaurantId,
+  onLogged,
+}: {
+  restaurantId: number;
+  onLogged: () => void;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({});
@@ -64,9 +76,9 @@ export default function AddRestaurantModal() {
     setFieldErrors({});
     setFormError(null);
     try {
-      await createRestaurant(toRequestBody(values));
+      await createVisit(restaurantId, toRequestBody(values));
       close();
-      router.refresh();
+      onLogged();
     } catch (err) {
       if (err instanceof ApiError && err.field) {
         setFieldErrors({ [err.field]: err.message });
@@ -83,9 +95,9 @@ export default function AddRestaurantModal() {
       <button
         type="button"
         onClick={open}
-        className="inline-flex items-center rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 disabled:opacity-50"
+        className="w-full rounded-lg border border-dashed border-stone-300 px-3 py-2 text-left text-sm font-medium text-stone-500 transition hover:border-emerald-700/60 hover:bg-emerald-50/50 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
       >
-        Add restaurant
+        + Log a visit
       </button>
 
       <dialog
@@ -94,20 +106,24 @@ export default function AddRestaurantModal() {
         className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-0 shadow-2xl shadow-stone-900/10 backdrop:bg-stone-900/30 backdrop:backdrop-blur-sm"
       >
         <form onSubmit={submit} noValidate className="space-y-5 p-6">
-          <h3 className="border-b border-stone-200 pb-4 text-lg font-semibold tracking-tight text-stone-900">Add a restaurant</h3>
+          <h3 className="border-b border-stone-200 pb-4 text-lg font-semibold tracking-tight text-stone-900">Log a visit</h3>
 
           {FIELDS.map((field) => {
             const error = fieldErrors[field.name];
+            // One modal per restaurant row, so the id carries the restaurant:
+            // a bare "date" would repeat down the page and each label would
+            // point at whichever input the browser found first.
+            const inputId = `visit-${restaurantId}-${field.name}`;
             return (
               <div key={field.name}>
-                <label htmlFor={field.name} className="block text-sm font-medium text-stone-800">
+                <label htmlFor={inputId} className="block text-sm font-medium text-stone-800">
                   {field.label}
                 </label>
                 <p className="text-xs text-stone-500">{field.hint}</p>
                 <input
-                  id={field.name}
+                  id={inputId}
                   name={field.name}
-                  type="text"
+                  type={field.type ?? 'text'}
                   inputMode={field.inputMode}
                   value={values[field.name]}
                   onChange={(e) => setValues({ ...values, [field.name]: e.target.value })}
@@ -142,7 +158,7 @@ export default function AddRestaurantModal() {
               disabled={submitting}
               className="inline-flex items-center rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 disabled:opacity-50"
             >
-              {submitting ? 'Adding…' : 'Add'}
+              {submitting ? 'Logging…' : 'Log visit'}
             </button>
           </div>
         </form>
@@ -152,24 +168,25 @@ export default function AddRestaurantModal() {
 }
 
 /**
- * Turn the string inputs into the body the API expects. Blank optional fields
- * are omitted rather than sent as "", and rating becomes a number.
+ * Turn the string inputs into the body the API expects. A blank notes field is
+ * omitted rather than sent as "", and amountSpent becomes a number.
  *
- * Non-numeric rating text is sent as the string it is, because
- * `JSON.stringify(NaN)` is `null` and the API reads null as "not rated" -
- * `Number(values.rating)` alone would quietly store "abc" as an unrated
- * restaurant instead of surfacing the server's 400 next to the field.
+ * Blank and non-numeric amounts are sent as the text they are, because
+ * `JSON.stringify(NaN)` is `null` and a null amount reads as a different
+ * mistake than the one the user made. Sending the typed text back gets the
+ * server's 400 about amountSpent placed next to the amountSpent input.
  *
  * That is also why the cast stays: the body deliberately carries a value the
  * request type does not allow, and only the server may rule on it.
  */
 function toRequestBody(values: FormValues) {
-  const body: Record<string, unknown> = { name: values.name };
-  if (values.cuisine.trim() !== '') body.cuisine = values.cuisine;
-  if (values.address.trim() !== '') body.address = values.address;
-  if (values.rating.trim() !== '') {
-    const rating = Number(values.rating);
-    body.rating = Number.isNaN(rating) ? values.rating : rating;
+  const body: Partial<Record<keyof VisitInput, unknown>> = { date: values.date };
+  if (values.amountSpent.trim() === '') {
+    body.amountSpent = values.amountSpent;
+  } else {
+    const amountSpent = Number(values.amountSpent);
+    body.amountSpent = Number.isNaN(amountSpent) ? values.amountSpent : amountSpent;
   }
-  return body as Parameters<typeof createRestaurant>[0];
+  if (values.notes.trim() !== '') body.notes = values.notes;
+  return body as Parameters<typeof createVisit>[1];
 }

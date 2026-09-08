@@ -8,7 +8,7 @@
  * The shapes these helpers return live in `lib/types.ts`, shared with the
  * handlers that produce them.
  */
-import type { Restaurant, RestaurantInput } from './types';
+import type { Restaurant, RestaurantInput, RestaurantSpend, Visit, VisitInput } from './types';
 
 // We read a base URL from the environment because Server Components fetch on
 // the server, where relative URLs don't resolve - so we need an absolute origin.
@@ -77,4 +77,49 @@ export async function createRestaurant(
 export async function deleteRestaurant(id: number): Promise<void> {
   const res = await fetch(`${API_URL}/api/restaurants/${id}`, { method: 'DELETE' });
   if (!res.ok) await throwApiError(res);
+}
+
+/**
+ * One restaurant's visits, newest date first - the API decides that order.
+ * Throws ApiError (status 404) when the restaurant does not exist; an empty
+ * array only ever means "no visits yet".
+ */
+export async function getVisits(restaurantId: number): Promise<Visit[]> {
+  const res = await fetch(`${API_URL}/api/restaurants/${restaurantId}/visits`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) return throwApiError(res);
+  return res.json();
+}
+
+/**
+ * Log a visit to one restaurant. The server decides what is valid and answers
+ * 400 with a message (and usually a field) if not.
+ */
+export async function createVisit(restaurantId: number, input: VisitInput): Promise<Visit> {
+  const res = await fetch(`${API_URL}/api/restaurants/${restaurantId}/visits`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) return throwApiError(res);
+  return res.json();
+}
+
+/**
+ * Delete one visit. Resolves on 204; throws ApiError on 404 - which also
+ * covers a visit filed under a different restaurant - or any other failure.
+ */
+export async function deleteVisit(restaurantId: number, visitId: number): Promise<void> {
+  const res = await fetch(`${API_URL}/api/restaurants/${restaurantId}/visits/${visitId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await throwApiError(res);
+}
+
+/** Spend totals for every restaurant in one request, for the home page rows. */
+export async function getSpendByRestaurant(): Promise<RestaurantSpend[]> {
+  const res = await fetch(`${API_URL}/api/restaurants/total-spending-and-visit-count`, { cache: 'no-store' });
+  if (!res.ok) return throwApiError(res);
+  return res.json();
 }

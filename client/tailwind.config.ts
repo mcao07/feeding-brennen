@@ -7,7 +7,12 @@ const config: Config = {
     './lib/**/*.{ts,tsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        // Set by next/font in layout.tsx; the stack after it is the fallback.
+        sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 };

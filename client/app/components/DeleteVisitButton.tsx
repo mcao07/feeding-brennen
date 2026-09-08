@@ -1,37 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ApiError, deleteRestaurant } from '@/lib/apiClient';
+import { ApiError, deleteVisit } from '@/lib/apiClient';
 import TrashIcon from './TrashIcon';
 
 /**
- * Delete button for one restaurant row. One click deletes the restaurant
- * and, through ON DELETE CASCADE, its visit history, then refreshes the
- * server-rendered list so the row disappears. No confirmation: browsers
- * can suppress window.confirm, and an in-page guard is a later refinement.
+ * Delete button for one visit sub-row. One click removes the visit, then hands
+ * back to the panel through `onDeleted`: the panel owns both the list and the
+ * page refresh, so the row and the restaurant's total move together. No
+ * confirmation, for the same reason DeleteRestaurantButton has none.
  */
-export default function DeleteRestaurantButton({ id, name }: { id: number; name: string }) {
-  const router = useRouter();
+export default function DeleteVisitButton({
+  restaurantId,
+  visitId,
+  onDeleted,
+}: {
+  restaurantId: number;
+  visitId: number;
+  onDeleted: () => void;
+}) {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function deleteAndRefresh() {
+  async function deleteAndReload() {
     setDeleting(true);
     setError(null);
     try {
-      await deleteRestaurant(id);
-      router.refresh();
+      await deleteVisit(restaurantId, visitId);
+      onDeleted();
     } catch (err) {
       // A 404 means someone else already deleted it, which is the outcome the
-      // click asked for. Refreshing drops the stale row instead of blaming it.
+      // click asked for. Reloading drops the stale row instead of blaming it.
       if (err instanceof ApiError && err.status === 404) {
-        router.refresh();
+        onDeleted();
         return;
       }
       setError(err instanceof Error ? err.message : 'Something went wrong');
       // Only on failure. After a successful delete the button stays disabled
-      // on purpose, until the refreshed list unmounts the row.
+      // on purpose, until the reloaded list unmounts the row.
       setDeleting(false);
     }
   }
@@ -41,9 +47,9 @@ export default function DeleteRestaurantButton({ id, name }: { id: number; name:
       {error && <span className="text-xs text-red-600">{error}</span>}
       <button
         type="button"
-        onClick={deleteAndRefresh}
+        onClick={deleteAndReload}
         disabled={deleting}
-        aria-label={`Delete ${name}`}
+        aria-label="Delete visit"
         title="Delete"
         className="rounded-md p-1.5 text-stone-400 transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:opacity-50"
       >

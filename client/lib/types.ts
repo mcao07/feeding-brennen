@@ -134,3 +134,37 @@ export function toVisit(row: Record<string, unknown>): Visit {
     createdAt: isoTimestamp(row.createdAt),
   };
 }
+
+/**
+ * One restaurant's spend totals, computed from its visits on every read and
+ * never stored, so they cannot drift from the visit rows. Served by
+ * GET /api/restaurants/total-spending-and-visit-count as a separate resource so the Part A
+ * restaurant shape stays exactly as the contract shows it.
+ */
+export interface RestaurantSpend {
+  restaurantId: number;
+  visitCount: number;
+  totalSpent: number;
+}
+
+/**
+ * The query behind that endpoint. LEFT JOIN keeps a restaurant nobody has
+ * visited yet; COALESCE turns its null SUM into 0. Every use must end with
+ * GROUP BY r.id.
+ */
+export const RESTAURANT_SPEND_SELECT = `
+  SELECT r.id AS "restaurantId",
+         COUNT(v.id)::int AS "visitCount",
+         COALESCE(SUM(v."amountSpent"), 0) AS "totalSpent"
+  FROM restaurants r
+  LEFT JOIN visits v ON v."restaurantId" = r.id
+`;
+
+/** Convert a spend row into the shape the API returns. */
+export function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend {
+  return {
+    restaurantId: Number(row.restaurantId),
+    visitCount: Number(row.visitCount),
+    totalSpent: Number(row.totalSpent),
+  };
+}
