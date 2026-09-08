@@ -2,6 +2,7 @@ import { getRestaurants, getSpendByRestaurant } from '@/lib/apiClient';
 import { formatUsd } from '@/lib/format';
 import AddRestaurantModal from './components/AddRestaurantModal';
 import DeleteRestaurantButton from './components/DeleteRestaurantButton';
+import SpendingOverview from './components/SpendingOverview';
 import VisitsPanel from './components/VisitsPanel';
 import type { RestaurantSpend } from '@/lib/types';
 
@@ -15,12 +16,21 @@ export default async function HomePage() {
   const [restaurants, spend] = await Promise.all([getRestaurants(), getSpendByRestaurant()]);
   const spendByRestaurantId = new Map(spend.map((s) => [s.restaurantId, s]));
 
+  // This string changes whenever a visit is logged or deleted, which is exactly
+  // when the overview must refetch. Deriving it from totals the page already
+  // loads costs nothing and needs no second mechanism to notify a client
+  // component that `router.refresh()` alone would leave holding stale numbers.
+  const refreshKey = spend.map((s) => `${s.restaurantId}:${s.visitCount}:${s.totalSpent}`).join('|');
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-2xl font-semibold tracking-tight">Restaurants</h2>
         <AddRestaurantModal />
       </div>
+
+      <SpendingOverview refreshKey={refreshKey} />
+
       <ul className="space-y-4">
         {restaurants.map((restaurant) => (
           <li
