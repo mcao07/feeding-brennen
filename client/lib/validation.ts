@@ -138,11 +138,36 @@ export function validateVisitBody(body: unknown): VisitInput {
 }
 
 /**
+ * The `from` and `to` query parameters of a spending window, or a 400.
+ *
+ * Both are required. Neither is compared to "today" because the server's today
+ * and the user's can differ by a day; the browser supplies the defaults, so it
+ * is the side that knows which day the user is on. Comparing the two strings
+ * directly is safe: YYYY-MM-DD sorts the same way the calendar does. The
+ * offending parameter is named so the UI can put the message under that input.
+ */
+export function validateDateRange(
+  from: string | null,
+  to: string | null
+): { from: string; to: string } {
+  if (typeof from !== 'string' || !isCalendarDate(from)) {
+    throw new ValidationError('from must be a real date in YYYY-MM-DD form', 'from');
+  }
+  if (typeof to !== 'string' || !isCalendarDate(to)) {
+    throw new ValidationError('to must be a real date in YYYY-MM-DD form', 'to');
+  }
+  if (from > to) {
+    throw new ValidationError('from must not be after to', 'from');
+  }
+  return { from, to };
+}
+
+/**
  * True for "YYYY-MM-DD" naming a day that exists. The regex catches the
  * shape; the round trip through Date catches 2026-02-30, which JavaScript
  * would otherwise silently roll into March.
  */
-function isCalendarDate(value: string): boolean {
+export function isCalendarDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split('-').map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));

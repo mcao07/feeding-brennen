@@ -8,7 +8,14 @@
  * The shapes these helpers return live in `lib/types.ts`, shared with the
  * handlers that produce them.
  */
-import type { Restaurant, RestaurantInput, RestaurantSpend, Visit, VisitInput } from './types';
+import type {
+  Restaurant,
+  RestaurantInput,
+  RestaurantSpend,
+  SpendingSummary,
+  Visit,
+  VisitInput,
+} from './types';
 
 // We read a base URL from the environment because Server Components fetch on
 // the server, where relative URLs don't resolve - so we need an absolute origin.
@@ -120,6 +127,20 @@ export async function deleteVisit(restaurantId: number, visitId: number): Promis
 /** Spend totals for every restaurant in one request, for the home page rows. */
 export async function getSpendByRestaurant(): Promise<RestaurantSpend[]> {
   const res = await fetch(`${API_URL}/api/restaurants/total-spending-and-visit-count`, { cache: 'no-store' });
+  if (!res.ok) return throwApiError(res);
+  return res.json();
+}
+
+/**
+ * Everything spent between two calendar days, both ends included. Throws
+ * ApiError (status 400, with `field` set to `from` or `to`) when the server
+ * rejects a date, so the overview can put the message under that input.
+ */
+export async function getSpending(from: string, to: string): Promise<SpendingSummary> {
+  const res = await fetch(
+    `${API_URL}/api/spending?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    { cache: 'no-store' }
+  );
   if (!res.ok) return throwApiError(res);
   return res.json();
 }

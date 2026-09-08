@@ -87,8 +87,11 @@ function isoTimestamp(value: unknown): string {
  *
  * Uses the date's *local* parts, not `toISOString()`. `pg` builds the Date at
  * local midnight, so converting to UTC can roll it to the neighbouring day.
+ *
+ * Exported because the spending route reads raw visit rows rather than whole
+ * `Visit` objects, and a second copy of this rule is a second way to be wrong.
  */
-function dateOnly(value: unknown): string {
+export function dateOnly(value: unknown): string {
   if (!(value instanceof Date)) return String(value);
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
@@ -167,4 +170,41 @@ export function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend
     visitCount: Number(row.visitCount),
     totalSpent: Number(row.totalSpent),
   };
+}
+
+/** One restaurant's share of a spending window. */
+export interface SpendingByRestaurant {
+  restaurantId: number;
+  restaurantName: string;
+  visitCount: number;
+  totalSpent: number;
+}
+
+/** One calendar day's spending inside a window. Days with no visits are omitted; the chart fills them. */
+export interface SpendingByDay {
+  date: string;
+  visitCount: number;
+  totalSpent: number;
+}
+
+/**
+ * Everything GET /api/spending returns for one window, all derived from the
+ * same visit rows so no two numbers can disagree.
+ */
+export interface SpendingSummary {
+  from: string;
+  to: string;
+  totalSpent: number;
+  visitCount: number;
+  uniqueRestaurants: number;
+  averagePerVisit: number | null;
+  mostExpensiveVisit: {
+    restaurantId: number;
+    restaurantName: string;
+    date: string;
+    amountSpent: number;
+  } | null;
+  mostVisitedRestaurant: { restaurantId: number; restaurantName: string; visitCount: number } | null;
+  byDay: SpendingByDay[];
+  byRestaurant: SpendingByRestaurant[];
 }
