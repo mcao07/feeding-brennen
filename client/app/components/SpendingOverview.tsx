@@ -123,13 +123,13 @@ export default function SpendingOverview({ refreshKey }: { refreshKey: string })
           <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <Tile label="Total spent" value={formatUsd(summary.totalSpent)} />
             <Tile label="Visits" value={String(summary.visitCount)} />
-            <Tile label="Unique restaurants" value={String(summary.uniqueRestaurants)} />
+            <Tile label="Restaurants" value={String(summary.uniqueRestaurants)} />
             <Tile
-              label="Average per visit"
+              label="Avg per visit"
               value={summary.averagePerVisit === null ? '—' : formatUsd(summary.averagePerVisit)}
             />
             <Tile
-              label="Most expensive visit"
+              label="Most expensive"
               value={
                 summary.mostExpensiveVisit === null
                   ? '—'
@@ -226,9 +226,9 @@ function DateField({
 function Tile({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-stone-500">{label}</div>
-      <div className="truncate text-2xl font-semibold tabular-nums text-stone-900">{value}</div>
-      {detail && <div className="truncate text-sm text-stone-500">{detail}</div>}
+      <div className="whitespace-nowrap text-[11px] uppercase tracking-wide text-stone-500">{label}</div>
+      <div className="text-xl font-semibold tabular-nums text-stone-900">{value}</div>
+      {detail && <div className="truncate text-xs text-stone-500">{detail}</div>}
     </div>
   );
 }
