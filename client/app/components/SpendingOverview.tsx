@@ -226,9 +226,9 @@ function DateField({
 function Tile({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
     <div>
-      <div className="whitespace-nowrap text-[11px] uppercase tracking-wide text-stone-500">{label}</div>
-      <div className="text-xl font-semibold tabular-nums text-stone-900">{value}</div>
-      {detail && <div className="truncate text-xs text-stone-500">{detail}</div>}
+      <div className="whitespace-nowrap text-[10px] uppercase tracking-wide text-stone-500">{label}</div>
+      <div className="whitespace-nowrap text-base font-semibold tabular-nums text-stone-900">{value}</div>
+      {detail && <div className="whitespace-nowrap text-xs text-stone-500">{detail}</div>}
     </div>
   );
 }
