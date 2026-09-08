@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ApiError, getSpending } from '@/lib/apiClient';
 import { firstOfMonthIso, formatShortDate, formatUsd, localIso, todayIso } from '@/lib/format';
 import type { SpendingSummary } from '@/lib/types';
+import SpendingChart from './SpendingChart';
 
 /** The quick ranges, each computed when clicked so "this month" follows the clock. */
 const QUICK_RANGES: { label: string; range: () => { from: string; to: string } }[] = [
@@ -132,6 +133,10 @@ export default function SpendingOverview({ refreshKey }: { refreshKey: string })
                   : `${summary.mostVisitedRestaurant.visitCount} ${summary.mostVisitedRestaurant.visitCount === 1 ? 'visit' : 'visits'}`
               }
             />
+          </div>
+
+          <div className="mt-6">
+            <SpendingChart byDay={summary.byDay} from={summary.from} to={summary.to} />
           </div>
 
           <div className="mt-6">
