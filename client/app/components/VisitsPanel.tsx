@@ -51,34 +51,32 @@ export default function VisitsPanel({ restaurantId }: { restaurantId: number }) 
   }
 
   return (
-    <div className="mt-2">
+    <div className="mt-4">
       <button
         type="button"
         onClick={toggle}
         aria-expanded={open}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900"
+        className="flex items-center gap-1.5 rounded text-sm font-medium text-stone-500 transition hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
       >
-        <span aria-hidden="true">{open ? '▾' : '▸'}</span>
-        Visits
+        <span aria-hidden="true" className="text-xs">{open ? '▾' : '▸'}</span>
+        Visit history
       </button>
 
       {open && (
-        <div className="ml-4 mt-2 space-y-2 border-l border-gray-100 pl-4">
+        <div className="ml-1 mt-3 space-y-2 border-l border-stone-200 pl-4">
           <LogVisitModal restaurantId={restaurantId} onLogged={reload} />
 
-          {loading && <p className="text-sm text-gray-500">Loading…</p>}
+          {loading && <p className="text-sm text-stone-500">Loading…</p>}
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           {/* The API orders visits newest date first, so this renders them in
               the order they arrived rather than sorting a second time. */}
           {visits?.map((visit) => (
-            <div key={visit.id} className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="flex items-baseline gap-2">
-                <span className="text-gray-600">{visit.date}</span>
-                <span className="font-medium">
-                  {visit.amountSpent === null ? '—' : formatUsd(visit.amountSpent)}
-                </span>
-                {visit.notes && <span className="text-gray-500">{visit.notes}</span>}
+            <div key={visit.id} className="flex items-center gap-3 py-0.5 text-sm">
+              <span className="w-24 shrink-0 tabular-nums text-stone-500">{visit.date}</span>
+              <span className="min-w-0 flex-1 truncate text-stone-500">{visit.notes}</span>
+              <span className="shrink-0 font-semibold tabular-nums text-stone-900">
+                {visit.amountSpent === null ? '—' : formatUsd(visit.amountSpent)}
               </span>
               <DeleteVisitButton
                 restaurantId={restaurantId}

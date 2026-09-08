@@ -17,30 +17,34 @@ export default async function HomePage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-medium">Restaurants</h2>
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-semibold tracking-tight">Restaurants</h2>
         <AddRestaurantModal />
       </div>
-      <ul className="space-y-3">
+      <ul className="space-y-4">
         {restaurants.map((restaurant) => (
           <li
             key={restaurant.id}
-            className="rounded-lg border border-gray-200 bg-white p-4"
+            className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm shadow-stone-900/[0.03]"
           >
-            <div className="flex items-baseline justify-between">
-              <span className="font-medium">{restaurant.name}</span>
-              <div className="flex items-baseline gap-3">
-                <span className="text-sm text-gray-500">
-                  {restaurant.rating}★
-                </span>
-                <span className="text-sm text-gray-500">
-                  {describeSpend(spendByRestaurantId.get(restaurant.id))}
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h3 className="truncate text-lg font-semibold tracking-tight text-stone-900">
+                  {restaurant.name}
+                </h3>
+                <div className="mt-0.5 truncate text-sm text-stone-500">
+                  {restaurant.cuisine} · {restaurant.address}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-xs font-medium tabular-nums text-stone-700">
+                  {restaurant.rating} ★
                 </span>
                 <DeleteRestaurantButton id={restaurant.id} name={restaurant.name} />
               </div>
             </div>
-            <div className="mt-1 text-sm text-gray-600">
-              {restaurant.cuisine} · {restaurant.address}
+            <div className="mt-3 text-sm tabular-nums text-stone-500">
+              {describeSpend(spendByRestaurantId.get(restaurant.id))}
             </div>
             <VisitsPanel restaurantId={restaurant.id} />
           </li>

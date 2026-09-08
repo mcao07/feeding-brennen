@@ -43,7 +43,7 @@ export default function DeleteVisitButton({
   }
 
   return (
-    <span className="flex items-baseline gap-2">
+    <span className="flex items-center gap-2">
       {error && <span className="text-xs text-red-600">{error}</span>}
       <button
         type="button"
@@ -51,7 +51,7 @@ export default function DeleteVisitButton({
         disabled={deleting}
         aria-label="Delete visit"
         title="Delete"
-        className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+        className="rounded-md p-1.5 text-stone-400 transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:opacity-50"
       >
         <TrashIcon />
       </button>

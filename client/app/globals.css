@@ -7,5 +7,9 @@
 }
 
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-[#FAFAF8] text-stone-900 antialiased;
+}
+
+::selection {
+  @apply bg-emerald-700/15 text-stone-900;
 }
