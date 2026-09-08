@@ -2,13 +2,29 @@ import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
 import { handleError } from '@/lib/errors';
 import {
-  SPENDING_VISITS_SELECT,
   dateOnly,
   type SpendingByDay,
   type SpendingByRestaurant,
   type SpendingSummary,
 } from '@/lib/types';
 import { validateDateRange } from '@/lib/validation';
+
+/**
+ * The one query behind this endpoint: every visit in the window, joined to its
+ * restaurant name. All of the summary's statistics are computed from these rows
+ * in the handler rather than by a query each, so the tiles, the chart, and the
+ * breakdown cannot disagree. The cost is proportional to the visits in range,
+ * which is the right trade for a personal tracker. Rows with a null amount -
+ * only reachable by writing to the table from outside the app, since the API
+ * requires one - are excluded so the sums stay honest.
+ */
+const SPENDING_VISITS_SELECT = `
+  SELECT v.id, v."restaurantId", r.name AS "restaurantName", v.date, v."amountSpent"
+  FROM visits v
+  JOIN restaurants r ON r.id = v."restaurantId"
+  WHERE v.date BETWEEN $1 AND $2 AND v."amountSpent" IS NOT NULL
+  ORDER BY v.date, v.id
+`;
 
 /**
  * GET /api/spending?from=YYYY-MM-DD&to=YYYY-MM-DD

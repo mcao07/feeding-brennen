@@ -208,20 +208,3 @@ export interface SpendingSummary {
   byDay: SpendingByDay[];
   byRestaurant: SpendingByRestaurant[];
 }
-
-/**
- * The one query behind that endpoint: every visit in the window, joined to its
- * restaurant name. All of the summary's statistics are computed from these rows
- * in the handler rather than by a query each, so the tiles, the chart, and the
- * breakdown cannot disagree. The cost is proportional to the visits in range,
- * which is the right trade for a personal tracker. Rows with a null amount -
- * only reachable by writing to the table from outside the app, since the API
- * requires one - are excluded so the sums stay honest.
- */
-export const SPENDING_VISITS_SELECT = `
-  SELECT v.id, v."restaurantId", r.name AS "restaurantName", v.date, v."amountSpent"
-  FROM visits v
-  JOIN restaurants r ON r.id = v."restaurantId"
-  WHERE v.date BETWEEN $1 AND $2 AND v."amountSpent" IS NOT NULL
-  ORDER BY v.date, v.id
-`;
