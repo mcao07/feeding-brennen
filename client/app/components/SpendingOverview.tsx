@@ -120,7 +120,7 @@ export default function SpendingOverview({ refreshKey }: { refreshKey: string })
         // Dimmed while a fetch is pending or the typed range is invalid: the
         // numbers on screen are the last good range's, and should look it.
         <div className={stale ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-          <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 md:grid-cols-3 lg:grid-cols-6">
             <Tile label="Total spent" value={formatUsd(summary.totalSpent)} />
             <Tile label="Visits" value={String(summary.visitCount)} />
             <Tile label="Restaurants" value={String(summary.uniqueRestaurants)} />
@@ -217,7 +217,7 @@ function Tile({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="whitespace-nowrap text-[10px] uppercase tracking-wide text-stone-500">{label}</div>
-      <div className="whitespace-nowrap text-base font-semibold tabular-nums text-stone-900">{value}</div>
+      <div className="whitespace-nowrap text-sm font-semibold tabular-nums text-stone-900">{value}</div>
     </div>
   );
 }
