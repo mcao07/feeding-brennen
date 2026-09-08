@@ -2,37 +2,35 @@
 
 ## 1. What did you build for Part B, and why that?
 
-The app is called Feeding Brennen and its README says it tracks what Brennen spends eating out. The template shipped a `visits` table with an `amountSpent` column, seeded it, wrote a `toVisit()` mapper, and then nothing read any of it. So the app could list restaurants and could not answer its own question.
+The README says the app tracks what Brennen spends eating out. The template shipped a `visits` table with an `amountSpent` column, seeded it, wrote a `toVisit()` mapper, and then nothing read any of it. The app could list restaurants and could not answer its own question.
 
-I built the spending half: log a visit to a restaurant, see what you have spent there, and see what you spent across all restaurants in any date range, with a chart. The visits scaffolding was a hint, and following it meant every piece I added had a real consumer on day one.
+So I built the spending half: log a visit, see what you have spent at each restaurant, and see what you spent across all of them in any date range, with a chart. The visits scaffolding was a hint, and following it meant every endpoint I added had a real consumer on day one.
 
 ## 2. What did you decide, and what did you rule out?
 
-**Visits are nested under a restaurant.** `POST /api/restaurants/:id/visits`. The restaurant comes from the URL and a `restaurantId` in the body is ignored, so a client cannot file a visit under a restaurant it did not name. Delete carries both ids in its `WHERE`, so one restaurant cannot remove another's visit.
+**Visits nest under a restaurant.** The restaurant comes from the URL, never the body, and delete carries both ids in its `WHERE`, so one restaurant cannot touch another's visits.
 
-**Totals are computed, never stored.** I ruled out a `totalSpent` column on `restaurants`: every visit insert and delete would have to update it, and the day they disagree you cannot tell which is right. `COUNT` and `SUM` over visits on every read costs nothing at this size and cannot drift.
+**Totals are computed, never stored.** I ruled out a `totalSpent` column: every visit write would have to update it, and when they disagree you cannot tell which is right. `SUM` over visits on every read cannot drift.
 
-**Totals live on their own endpoint.** My first cut added `visitCount` and `totalSpent` to every restaurant response. The Part A contract shows six keys and says to match them exactly, so I moved the totals to `GET /api/restaurants/total-spending-and-visit-count` and the page fetches both in parallel. Two requests instead of one, in exchange for an untouched contract. The PR history shows the change of mind.
+**Totals live on their own endpoint.** My first cut added two keys to every restaurant response. The Part A contract says to match six keys exactly, so I moved them to `GET /api/restaurants/total-spending-and-visit-count`. Two requests instead of one, for an untouched contract. The PR history shows the change of mind.
 
-**The server is the only validator.** Neither form has rules of its own. A 400 names the field it is about, and the form places the message under that input. Every error costs one round trip. I took that over a second copy of the rules that drifts.
+**The server is the only validator.** The forms have no rules. A 400 names its field and the form places the message under that input. Each error costs a round trip; I took that over a second copy of the rules that drifts.
 
-**Spending is one endpoint, one query.** Every number in the overview (totals, unique restaurants, average, most expensive, most visited, per day, per restaurant) is derived from one list of visits in the handler, so the tiles, the chart, and the breakdown cannot disagree.
+**Spending is one endpoint, one query.** Every tile, the chart, and the breakdown derive from one list of visits, so they cannot disagree.
 
-**`amountSpent` is required** even though the column is nullable. A visit with no amount is useless to a spending tracker.
+**Ruled out:** a chart library, a shared form builder for the two modals, client-side validation, server-side search.
 
-**Ruled out:** a chart library (the bar chart is 400 lines of inline SVG and I wanted to own the scaling); a shared form builder for the two modals (two similar files beat an abstraction until a third form appears); a client-side copy of the validation rules; server-side search (the list is already loaded).
-
-**A tradeoff I am not sure about:** the migration cascades a restaurant delete to its visits. I left it, and the trash icon deletes with one click. For a spending tracker the history is the point, and a real product would block the delete or soft-delete. I removed the `window.confirm` because browsers can suppress it; an in-page confirm is the right fix.
+**The tradeoff I am least sure of:** the migration cascades a restaurant delete to its visits. I left it, and the trash icon has no confirm because browsers can suppress `window.confirm`. For a spending tracker the history is the point; a real product would block the delete or soft-delete.
 
 ## 3. Where did you cut corners?
 
 With another day, in order:
 
-1. **Edit a visit.** Typos in amounts are the most common fix and the only path today is delete and re-log. `PUT /api/restaurants/:id/visits/:visitId` plus a pencil icon that opens the log modal pre-filled.
-2. **Three-decimal amounts round silently.** `12.345` is stored as `12.35`. Every other bad input gets a 400; this one should too.
-3. **`DELETE /:id/visits/:visitId` never checks the restaurant separately.** `/99999/visits/1` says "Visit not found" while `/abc/visits/1` says "Restaurant not found." Both are 404 and the contract is met, but the messages disagree.
-4. **The default date range is computed during server render too.** If the server's timezone crosses a month boundary against the user's, React would warn about mismatched input values. Local dev is unaffected.
-5. `GET /api/restaurants/:id` and `PUT` have no UI caller. A detail page with an edit form would use both.
+1. **Edit a visit.** Fixing a typo in an amount means delete and re-log today.
+2. **Three-decimal amounts round silently** to cents. Every other bad input gets a 400.
+3. **Visit delete messages disagree.** `/99999/visits/1` says "Visit not found," `/abc/visits/1` says "Restaurant not found." Both are 404 and the contract is met.
+4. **Default dates are computed during server render too.** A server timezone that crosses a month boundary against the user's would cause a hydration warning.
+5. `GET /api/restaurants/:id` and `PUT` have no UI caller. A detail page would use both.
 
 ---
 
