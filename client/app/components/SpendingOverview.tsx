@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ApiError, getSpending } from '@/lib/apiClient';
-import { firstOfMonthIso, formatShortDate, formatUsd, localIso, todayIso } from '@/lib/format';
+import { firstOfMonthIso, formatUsd, localIso, todayIso } from '@/lib/format';
 import type { SpendingSummary } from '@/lib/types';
 import SpendingChart from './SpendingChart';
 
@@ -135,20 +135,10 @@ export default function SpendingOverview({ refreshKey }: { refreshKey: string })
                   ? '—'
                   : formatUsd(summary.mostExpensiveVisit.amountSpent)
               }
-              detail={
-                summary.mostExpensiveVisit === null
-                  ? undefined
-                  : `${summary.mostExpensiveVisit.restaurantName} · ${formatShortDate(summary.mostExpensiveVisit.date)}`
-              }
             />
             <Tile
               label="Most visited"
               value={summary.mostVisitedRestaurant?.restaurantName ?? '—'}
-              detail={
-                summary.mostVisitedRestaurant === null
-                  ? undefined
-                  : `${summary.mostVisitedRestaurant.visitCount} ${summary.mostVisitedRestaurant.visitCount === 1 ? 'visit' : 'visits'}`
-              }
             />
           </div>
 
@@ -222,13 +212,12 @@ function DateField({
   );
 }
 
-/** One stat. `detail` is the quieter second line some tiles need to make sense. */
-function Tile({ label, value, detail }: { label: string; value: string; detail?: string }) {
+/** One stat: a label and a value, nothing else, so six fit on one row. */
+function Tile({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="whitespace-nowrap text-[10px] uppercase tracking-wide text-stone-500">{label}</div>
       <div className="whitespace-nowrap text-base font-semibold tabular-nums text-stone-900">{value}</div>
-      {detail && <div className="whitespace-nowrap text-xs text-stone-500">{detail}</div>}
     </div>
   );
 }
