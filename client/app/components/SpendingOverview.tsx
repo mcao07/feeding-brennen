@@ -7,6 +7,11 @@ import type { SpendingSummary } from '@/lib/types';
 import SpendingChart from './SpendingChart';
 
 /** The quick ranges, each computed when clicked so "this month" follows the clock. */
+/** How long typing must pause before a range is fetched. Short enough to feel
+ *  live, long enough to skip the half-typed dates a keystroke-by-keystroke
+ *  edit passes through. */
+const FETCH_DELAY_MS = 250;
+
 const QUICK_RANGES: { label: string; range: () => { from: string; to: string } }[] = [
   { label: 'This month', range: () => ({ from: firstOfMonthIso(), to: todayIso() }) },
   { label: 'Last month', range: lastMonth },
@@ -39,34 +44,38 @@ export default function SpendingOverview({ refreshKey }: { refreshKey: string })
   const [fieldErrors, setFieldErrors] = useState<{ from?: string; to?: string }>({});
 
   useEffect(() => {
-    // Typing in a date input changes `from` on every keystroke, so an earlier
-    // request can still be in flight when a later one starts. The flag keeps a
+    // Typing in a date input changes `from` on every keystroke, and a year
+    // typed digit by digit passes through real dates like 0002-09-02. Waiting
+    // briefly after the last keystroke skips those windows; the flag keeps a
     // slow answer to an old window from overwriting a fresh one.
     let current = true;
     setLoading(true);
-    getSpending(from, to)
-      .then((next) => {
-        if (!current) return;
-        setSummary(next);
-        setError(null);
-        setFieldErrors({});
-      })
-      .catch((err: unknown) => {
-        if (!current) return;
-        const message = err instanceof Error ? err.message : 'Something went wrong';
-        if (err instanceof ApiError && (err.field === 'from' || err.field === 'to')) {
-          setFieldErrors({ [err.field]: message });
+    const timer = setTimeout(() => {
+      getSpending(from, to)
+        .then((next) => {
+          if (!current) return;
+          setSummary(next);
           setError(null);
-        } else {
           setFieldErrors({});
-          setError(message);
-        }
-      })
-      .finally(() => {
-        if (current) setLoading(false);
-      });
+        })
+        .catch((err: unknown) => {
+          if (!current) return;
+          const message = err instanceof Error ? err.message : 'Something went wrong';
+          if (err instanceof ApiError && (err.field === 'from' || err.field === 'to')) {
+            setFieldErrors({ [err.field]: message });
+            setError(null);
+          } else {
+            setFieldErrors({});
+            setError(message);
+          }
+        })
+        .finally(() => {
+          if (current) setLoading(false);
+        });
+    }, FETCH_DELAY_MS);
     return () => {
       current = false;
+      clearTimeout(timer);
     };
   }, [from, to, refreshKey]);
 
@@ -74,6 +83,8 @@ export default function SpendingOverview({ refreshKey }: { refreshKey: string })
     setFrom(range.from);
     setTo(range.to);
   }
+
+  const stale = loading || Boolean(fieldErrors.from || fieldErrors.to || error);
 
   return (
     <section className="mb-6 rounded-xl border border-stone-200 bg-white p-5 shadow-sm shadow-stone-900/[0.03]">
@@ -97,12 +108,18 @@ export default function SpendingOverview({ refreshKey }: { refreshKey: string })
         </div>
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {/* A reserved line, so a message appearing never moves the controls or
+          the tiles below them. Field errors and general errors share it. */}
+      <p className="mt-2 min-h-[1.25rem] text-sm text-red-600" aria-live="polite">
+        {fieldErrors.from ?? fieldErrors.to ?? error ?? ''}
+      </p>
 
       {/* The last summary stays on screen while the next one loads, dimmed, so
           changing the range does not collapse the card and move the page. */}
       {summary && (
-        <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+        // Dimmed while a fetch is pending or the typed range is invalid: the
+        // numbers on screen are the last good range's, and should look it.
+        <div className={stale ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
           <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <Tile label="Total spent" value={formatUsd(summary.totalSpent)} />
             <Tile label="Visits" value={String(summary.visitCount)} />
@@ -201,7 +218,6 @@ function DateField({
             : 'border-stone-300 focus:border-emerald-700 focus:ring-emerald-700/20'
         }`}
       />
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
 }
