@@ -87,8 +87,11 @@ function isoTimestamp(value: unknown): string {
  *
  * Uses the date's *local* parts, not `toISOString()`. `pg` builds the Date at
  * local midnight, so converting to UTC can roll it to the neighbouring day.
+ *
+ * Exported because the spending route reads raw visit rows rather than whole
+ * `Visit` objects, and a second copy of this rule is a second way to be wrong.
  */
-function dateOnly(value: unknown): string {
+export function dateOnly(value: unknown): string {
   if (!(value instanceof Date)) return String(value);
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
@@ -168,3 +171,57 @@ export function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend
     totalSpent: Number(row.totalSpent),
   };
 }
+
+/** One restaurant's share of a spending window. */
+export interface SpendingByRestaurant {
+  restaurantId: number;
+  restaurantName: string;
+  visitCount: number;
+  totalSpent: number;
+}
+
+/** One calendar day's spending inside a window. Days with no visits are omitted; the chart fills them. */
+export interface SpendingByDay {
+  date: string;
+  visitCount: number;
+  totalSpent: number;
+}
+
+/**
+ * Everything GET /api/spending returns for one window, all derived from the
+ * same visit rows so no two numbers can disagree.
+ */
+export interface SpendingSummary {
+  from: string;
+  to: string;
+  totalSpent: number;
+  visitCount: number;
+  uniqueRestaurants: number;
+  averagePerVisit: number | null;
+  mostExpensiveVisit: {
+    restaurantId: number;
+    restaurantName: string;
+    date: string;
+    amountSpent: number;
+  } | null;
+  mostVisitedRestaurant: { restaurantId: number; restaurantName: string; visitCount: number } | null;
+  byDay: SpendingByDay[];
+  byRestaurant: SpendingByRestaurant[];
+}
+
+/**
+ * The one query behind that endpoint: every visit in the window, joined to its
+ * restaurant name. All of the summary's statistics are computed from these rows
+ * in the handler rather than by a query each, so the tiles, the chart, and the
+ * breakdown cannot disagree. The cost is proportional to the visits in range,
+ * which is the right trade for a personal tracker. Rows with a null amount -
+ * only reachable by writing to the table from outside the app, since the API
+ * requires one - are excluded so the sums stay honest.
+ */
+export const SPENDING_VISITS_SELECT = `
+  SELECT v.id, v."restaurantId", r.name AS "restaurantName", v.date, v."amountSpent"
+  FROM visits v
+  JOIN restaurants r ON r.id = v."restaurantId"
+  WHERE v.date BETWEEN $1 AND $2 AND v."amountSpent" IS NOT NULL
+  ORDER BY v.date, v.id
+`;
