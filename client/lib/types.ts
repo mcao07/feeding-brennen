@@ -32,10 +32,6 @@ export interface Restaurant {
   address: string | null;
   /** 0-5. A real number in JSON, not a string. */
   rating: number | null;
-  /** Computed from the visits table on every read, never stored. */
-  visitCount: number;
-  /** Sum of amountSpent over this restaurant's visits, 0 when none. */
-  totalSpent: number;
   /** ISO 8601 timestamp, e.g. "2026-01-01T00:00:00.000Z" */
   createdAt: string;
 }
@@ -100,26 +96,12 @@ function dateOnly(value: unknown): string {
 }
 
 /**
- * The whole SELECT every restaurant read starts from: the stored columns plus
- * the two visit totals.
- *
- * The totals are counted here on every read rather than kept in a column, so
- * they cannot drift from the visit rows they describe - logging or deleting a
- * visit needs no second write. The LEFT JOIN keeps a restaurant nobody has
- * visited yet, and COALESCE turns that restaurant's null SUM into 0.
- *
- * Columns are named explicitly so `created_at` comes back labelled
- * `createdAt`, which is what `toRestaurant()` reads and what the API contract
- * promises. Every query built on this must end with `GROUP BY r.id`, before
- * any ORDER BY.
+ * The columns every restaurant query selects or returns. Named explicitly so
+ * `created_at` comes back labelled `createdAt`, which is what `toRestaurant()`
+ * reads and what the API contract promises. Use it in SELECT and RETURNING.
  */
-export const RESTAURANT_WITH_TOTALS = `
-  SELECT r.id, r.name, r.cuisine, r.address, r.rating, r.created_at AS "createdAt",
-         COUNT(v.id)::int AS "visitCount",
-         COALESCE(SUM(v."amountSpent"), 0) AS "totalSpent"
-  FROM restaurants r
-  LEFT JOIN visits v ON v."restaurantId" = r.id
-`;
+export const RESTAURANT_COLUMNS =
+  'id, name, cuisine, address, rating, created_at AS "createdAt"';
 
 /** Convert a `restaurants` row into the shape the API returns. */
 export function toRestaurant(row: Record<string, unknown>): Restaurant {
@@ -129,14 +111,12 @@ export function toRestaurant(row: Record<string, unknown>): Restaurant {
     cuisine: (row.cuisine as string | null) ?? null,
     address: (row.address as string | null) ?? null,
     rating: num(row.rating),
-    visitCount: Number(row.visitCount),
-    totalSpent: Number(row.totalSpent),
     createdAt: isoTimestamp(row.createdAt),
   };
 }
 
 /**
- * The twin of `RESTAURANT_WITH_TOTALS` for the visits table, which also spells
+ * The twin of `RESTAURANT_COLUMNS` for the visits table, which also spells
  * its timestamp `created_at`. The camelCase columns are quoted because
  * Postgres lowercases unquoted names.
  */
@@ -152,5 +132,39 @@ export function toVisit(row: Record<string, unknown>): Visit {
     amountSpent: num(row.amountSpent),
     notes: (row.notes as string | null) ?? null,
     createdAt: isoTimestamp(row.createdAt),
+  };
+}
+
+/**
+ * One restaurant's spend totals, computed from its visits on every read and
+ * never stored, so they cannot drift from the visit rows. Served by
+ * GET /api/restaurants/total-spending as a separate resource so the Part A
+ * restaurant shape stays exactly as the contract shows it.
+ */
+export interface RestaurantSpend {
+  restaurantId: number;
+  visitCount: number;
+  totalSpent: number;
+}
+
+/**
+ * The query behind that endpoint. LEFT JOIN keeps a restaurant nobody has
+ * visited yet; COALESCE turns its null SUM into 0. Every use must end with
+ * GROUP BY r.id.
+ */
+export const RESTAURANT_SPEND_SELECT = `
+  SELECT r.id AS "restaurantId",
+         COUNT(v.id)::int AS "visitCount",
+         COALESCE(SUM(v."amountSpent"), 0) AS "totalSpent"
+  FROM restaurants r
+  LEFT JOIN visits v ON v."restaurantId" = r.id
+`;
+
+/** Convert a spend row into the shape the API returns. */
+export function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend {
+  return {
+    restaurantId: Number(row.restaurantId),
+    visitCount: Number(row.visitCount),
+    totalSpent: Number(row.totalSpent),
   };
 }

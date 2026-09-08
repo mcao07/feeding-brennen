@@ -8,7 +8,7 @@
  * The shapes these helpers return live in `lib/types.ts`, shared with the
  * handlers that produce them.
  */
-import type { Restaurant, RestaurantInput, Visit, VisitInput } from './types';
+import type { Restaurant, RestaurantInput, RestaurantSpend, Visit, VisitInput } from './types';
 
 // We read a base URL from the environment because Server Components fetch on
 // the server, where relative URLs don't resolve - so we need an absolute origin.
@@ -115,4 +115,11 @@ export async function deleteVisit(restaurantId: number, visitId: number): Promis
     method: 'DELETE',
   });
   if (!res.ok) await throwApiError(res);
+}
+
+/** Spend totals for every restaurant in one request, for the home page rows. */
+export async function getSpendByRestaurant(): Promise<RestaurantSpend[]> {
+  const res = await fetch(`${API_URL}/api/restaurants/total-spending`, { cache: 'no-store' });
+  if (!res.ok) return throwApiError(res);
+  return res.json();
 }
