@@ -55,6 +55,16 @@ export async function getRestaurants(): Promise<Restaurant[]> {
 }
 
 /**
+ * One restaurant by id. Throws ApiError (status 404) when it does not exist.
+ * No screen calls this yet; a restaurant detail page would.
+ */
+export async function getRestaurant(id: number | string): Promise<Restaurant> {
+  const res = await fetch(`${API_URL}/api/restaurants/${id}`, { cache: 'no-store' });
+  if (!res.ok) return throwApiError(res);
+  return res.json();
+}
+
+/**
  * Create a restaurant. Optional fields may be omitted; the server decides
  * what is valid and answers 400 with a message (and usually a field) if not.
  */
