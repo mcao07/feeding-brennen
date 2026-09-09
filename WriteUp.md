@@ -10,21 +10,29 @@
 
 ## 1. What did you build for Part B, and why that?
 
-> What made you pick it over everything else you could have built? This is the
-> question we care most about - the _why_ matters more than the _what_.
+I implemented visit tracking. For each restaurant you can log a visit with the date, amount spent, and notes, and see the list under that restaurant. On top of that I also implemented a spending endpoint and a frontend chart that show visits and spend over a date range.
+
+I picked these features to implement because when I look back at restaurants, one of the things I want to know is how much I spent eating out. Price also plays a really big role in how I judge a restaurant. If the food was worth the money (high taste/cost ratio), I think more of the place and I am more likely to recommend it. The visits table was already in the schema with nothing reading it, so this felt like the feature the app was missing.
 
 ## 2. What did you decide, and what did you rule out?
 
-> Route shapes, data model, where the logic lives, what you deliberately didn't
-> do. Name a tradeoff you're not sure you got right.
+Visits live under a restaurant. Logging one is a POST to the visits route under that restaurant, with a button and form on each restaurant row. The spending endpoint takes a date range and returns high level stats plus a per day and per restaurant breakdown. Totals per restaurant are computed from visits on every read, not stored, so they cannot drift (reduces complexity).
+
+The tradeoff I am not sure I got right is that all the spending calculations happen inside the endpoint. I went back and forth on returning more raw data and doing the calculations higher up, either in the client wrapper functions or in helpers inside the component. I kept it in the endpoint because the page only needs a small set of stats right now, and one response covers all of them. The problem comes if the app grows. If different sections need different parts of the data, every one of them would call the whole endpoint and throw most of the response away. At that point it would make more sense to return the raw visits and let each section compute what it needs.
 
 ## 3. Where did you cut corners?
 
-> What would you fix first with another day?
+The UI is functional but boring. I would spend more time making it intuitive and interesting.
+
+The first thing I would fix with another day is client side checking. Right now you have to press submit and wait for the request to come back before you know which field is wrong. I would add checks in the browser so the form will not submit unless the fields are in the right format, while keeping the server as the real authority.
+
+You cannot edit a visit. Typos in amounts are the most common thing to fix, and the only path right now is delete and log it again. It would be a PUT on the visit and the same form opened with the values filled in.
+
+The totals endpoint returns every restaurant on every page load. That is fine at twelve restaurants. At a thousand the page would fetch a thousand totals to draw the first screen. The fix is paging the list and asking for totals only for the rows on screen, which means the totals endpoint takes a list of ids.
 
 ## 4. What should we look at first?
 
-> CHALLENGE.md lists this as the fourth question; the skeleton left it out.
+lib/validation.ts and lib/errors.ts, since the input rules and error handling for every endpoint go through them. Then app/api/spending/route.ts for the one query design. The verification section below has the curl commands.
 
 ---
 
@@ -174,8 +182,13 @@ In the browser: add a restaurant with a blank name and see the message under Nam
 
 ## Known issues / what I'd do next
 
-- Items 1 through 5 under "Where did you cut corners."
+- Deleting a restaurant deletes its visits with one click, because the migration cascades and I removed the browser confirm popup, which browsers can suppress. For a spending tracker the history is the point. A real version would block the delete while visits exist, or hide the restaurant instead of removing it. The DELETE stub asked for an opinion on the cascade, and this is mine.
+- Duplicate restaurant names are accepted on purpose, since a chain can have two branches, so there is no 409 path and no unique index.
+- Amounts with more than two decimals are rounded to cents by Postgres with no warning. Every other bad input gets a 400, and this one should too.
+- Deleting a visit through a restaurant that does not exist says "Visit not found" while a malformed restaurant id says "Restaurant not found." Both are 404 and the contract is met, but the messages disagree.
+- The spending card's default dates are computed during server render as well as in the browser. If the server's timezone crosses a month boundary against the user's, React would warn about mismatched input values. Local dev is unaffected.
 - `averagePerVisit` is rounded to cents, so it does not multiply back to `totalSpent` exactly.
 - Unrouted methods (`PATCH /api/restaurants/1`) return Next's default 405 with an empty body rather than `{"error"}`.
 - Digit-only names and cuisines are accepted. I tried a "must contain a letter" rule and reverted it as a rule nobody needed; a cuisine dropdown would be the better fix.
-- Next: a monthly budget with a pace bar (needs a `budgets` table and a migration), a restaurant detail page, and "last visited" on each card.
+- `GET /api/restaurants/:id` and `PUT` have no UI caller. A restaurant detail page with an edit form would use both.
+- Next: editing a visit, paging the list and totals (see question 3), a monthly budget with a pace bar (needs a `budgets` table and a migration), and "last visited" on each card.
