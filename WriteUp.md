@@ -1,13 +1,5 @@
 # Write-up
 
-> This is the skeleton - replace everything in blockquotes with your own words
-> and delete the prompts as you go. Aim for **~300 words** across the four
-> questions; the route reference below can be as long as it needs to be.
->
-> Write it like you're handing the work to a teammate. We'd rather read an
-> honest "I ran out of time on X and here's what I'd do" than a polished list of
-> accomplishments. **Submit this even if you didn't finish** - see CHALLENGE.md.
-
 ## 1. What did you build for Part B, and why that?
 
 I implemented visit tracking. For each restaurant you can log a visit with the date, amount spent, and notes, and see the list under that restaurant. On top of that I also implemented a spending endpoint and a frontend chart that show visits and spend over a date range.
