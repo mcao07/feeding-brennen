@@ -36,12 +36,6 @@ lib/validation.ts and lib/errors.ts, since the input rules and error handling fo
 
 ---
 
-## Part A notes
-
-- **A1.** The list query sorted by `createdAt`; the column is `created_at`. Both reads also used `SELECT *`, so `toRestaurant()` saw no `createdAt` key and returned the string `"undefined"` for every date. Every restaurant query now selects columns by name with `created_at AS "createdAt"`, so the mapper never learns the database spelling.
-- **A3.** `HttpError` carries its own status and optional field; `handleError()` has one branch. Unknown errors log server-side and return a generic 500. `parseRestaurantId()` rejects anything that is not a positive integer with a 404, including leading zeros and values past the Postgres integer max. That last case was found by a verification sweep: `/api/restaurants/2147483648` passed the digits check and overflowed inside Postgres as a 500.
-- Malformed ids and missing records both answer 404, as the contract asks. I would lean 400 for a malformed id in a public API so a client can tell a typo from a deleted record.
-
 ## Part B: routes
 
 | Method and path | What it does | Success | Errors |
@@ -86,8 +80,6 @@ The example bodies below were captured against the template's original seed (5 r
   "byRestaurant": [ { "restaurantId": 2, "restaurantName": "Sakura House", "visitCount": 1, "totalSpent": 88 } ]
 }
 ```
-
-**UI.** Each restaurant row shows its total and visit count, a collapsible visit history (loaded on first open), a "Log a visit" modal, and a trash icon per visit. Above the list, a Spending card with From/To pickers, quick ranges, six stat tiles, a bar chart that buckets by day, week, or month and fills empty buckets, and a per-restaurant breakdown. A search box filters restaurants by name. No new dependencies; Inter is loaded through `next/font`.
 
 ## Schema changes
 
