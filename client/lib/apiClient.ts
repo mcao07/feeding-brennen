@@ -38,7 +38,7 @@ export class ApiError extends Error {
 }
 
 /**
- * Turn a failed response into an `ApiError` and throw it. Every write helper
+ * Turn a failed response into an `ApiError` and throw it. Every helper here
  * fails the same way, and a body that isn't JSON (a proxy's HTML error page,
  * an empty 204) must not mask the status the caller needs to see.
  */
@@ -54,7 +54,10 @@ export async function getRestaurants(): Promise<Restaurant[]> {
   return res.json();
 }
 
-/** One restaurant by id. Throws ApiError (status 404) when it does not exist. */
+/**
+ * One restaurant by id. Throws ApiError (status 404) when it does not exist.
+ * No screen calls this yet; a restaurant detail page would.
+ */
 export async function getRestaurant(id: number | string): Promise<Restaurant> {
   const res = await fetch(`${API_URL}/api/restaurants/${id}`, { cache: 'no-store' });
   if (!res.ok) return throwApiError(res);
@@ -126,7 +129,9 @@ export async function deleteVisit(restaurantId: number, visitId: number): Promis
 
 /** Spend totals for every restaurant in one request, for the home page rows. */
 export async function getSpendByRestaurant(): Promise<RestaurantSpend[]> {
-  const res = await fetch(`${API_URL}/api/restaurants/total-spending-and-visit-count`, { cache: 'no-store' });
+  const res = await fetch(`${API_URL}/api/restaurants/total-spending-and-visit-count`, {
+    cache: 'no-store',
+  });
   if (!res.ok) return throwApiError(res);
   return res.json();
 }
