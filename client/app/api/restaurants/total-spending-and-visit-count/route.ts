@@ -1,7 +1,20 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
 import { handleError } from '@/lib/errors';
-import { RESTAURANT_SPEND_SELECT, toRestaurantSpend } from '@/lib/types';
+import { toRestaurantSpend } from '@/lib/types';
+
+/**
+ * The one query behind this endpoint. LEFT JOIN keeps a restaurant nobody has
+ * visited yet; COALESCE turns its null SUM into 0. Lives here rather than in
+ * lib/types.ts because this route is its only caller.
+ */
+const RESTAURANT_SPEND_SELECT = `
+  SELECT r.id AS "restaurantId",
+         COUNT(v.id)::int AS "visitCount",
+         COALESCE(SUM(v."amountSpent"), 0) AS "totalSpent"
+  FROM restaurants r
+  LEFT JOIN visits v ON v."restaurantId" = r.id
+`;
 
 /**
  * GET /api/restaurants/total-spending-and-visit-count

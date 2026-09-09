@@ -6,8 +6,13 @@
  * them. Neither side owns the definition.
  *
  * Alongside each interface is a `toX()` mapper that converts a raw database row
- * into that shape. You need them because `pg` does not hand back the types you
- * might expect:
+ * into that shape, and beside each mapper the column list whose aliases it
+ * reads. The column list stays here even when only one route uses it, because
+ * the alias and the mapper that depends on it belong in one place. Any other
+ * query lives in the route that runs it.
+ *
+ * The mappers exist because `pg` does not hand back the types you might
+ * expect:
  *
  *   - `NUMERIC` columns (`rating`, `amountSpent`) arrive as **strings**
  *     ("4.5", not 4.5). node-postgres does this on purpose - NUMERIC has more
@@ -22,7 +27,8 @@
  *
  * NOTE: these are TypeScript types. They are erased at build time and validate
  * nothing at runtime - a body that claims to be a Restaurant is still just
- * `unknown` until you check it. That check is your job (task A3).
+ * `unknown` until it is checked. That check lives in `lib/validation.ts`, which
+ * is why the route handlers call it before they touch the database.
  */
 
 export interface Restaurant {
@@ -89,7 +95,8 @@ function isoTimestamp(value: unknown): string {
  * local midnight, so converting to UTC can roll it to the neighbouring day.
  *
  * Exported because the spending route reads raw visit rows rather than whole
- * `Visit` objects, and a second copy of this rule is a second way to be wrong.
+ * `Visit` objects, and `lib/format.ts` builds the browser's default dates with
+ * the same rule. One copy, so there is one way to get the timezone right.
  */
 export function dateOnly(value: unknown): string {
   if (!(value instanceof Date)) return String(value);
@@ -141,27 +148,14 @@ export function toVisit(row: Record<string, unknown>): Visit {
 /**
  * One restaurant's spend totals, computed from its visits on every read and
  * never stored, so they cannot drift from the visit rows. Served by
- * GET /api/restaurants/total-spending-and-visit-count as a separate resource so the Part A
- * restaurant shape stays exactly as the contract shows it.
+ * GET /api/restaurants/total-spending-and-visit-count as its own resource, so
+ * the Part A restaurant shape stays exactly as the contract shows it.
  */
 export interface RestaurantSpend {
   restaurantId: number;
   visitCount: number;
   totalSpent: number;
 }
-
-/**
- * The query behind that endpoint. LEFT JOIN keeps a restaurant nobody has
- * visited yet; COALESCE turns its null SUM into 0. Every use must end with
- * GROUP BY r.id.
- */
-export const RESTAURANT_SPEND_SELECT = `
-  SELECT r.id AS "restaurantId",
-         COUNT(v.id)::int AS "visitCount",
-         COALESCE(SUM(v."amountSpent"), 0) AS "totalSpent"
-  FROM restaurants r
-  LEFT JOIN visits v ON v."restaurantId" = r.id
-`;
 
 /** Convert a spend row into the shape the API returns. */
 export function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend {
@@ -180,7 +174,10 @@ export interface SpendingByRestaurant {
   totalSpent: number;
 }
 
-/** One calendar day's spending inside a window. Days with no visits are omitted; the chart fills them. */
+/**
+ * One calendar day's spending inside a window. Days with no visits are
+ * omitted; the chart fills them in.
+ */
 export interface SpendingByDay {
   date: string;
   visitCount: number;
@@ -204,7 +201,11 @@ export interface SpendingSummary {
     date: string;
     amountSpent: number;
   } | null;
-  mostVisitedRestaurant: { restaurantId: number; restaurantName: string; visitCount: number } | null;
+  mostVisitedRestaurant: {
+    restaurantId: number;
+    restaurantName: string;
+    visitCount: number;
+  } | null;
   byDay: SpendingByDay[];
   byRestaurant: SpendingByRestaurant[];
 }

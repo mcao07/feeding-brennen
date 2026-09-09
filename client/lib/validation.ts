@@ -19,7 +19,7 @@ export function parseRestaurantId(raw: string): number {
   return id;
 }
 
-/** The `:visitId` segment of a visit URL, or a 404. Same rules as above. */
+/** The `:visitId` segment of a visit URL, or a 404. Same rules as parseRestaurantId. */
 export function parseVisitId(raw: string): number {
   const id = parsePositiveInteger(raw);
   if (id === null) throw new NotFoundError('Visit not found');
@@ -116,7 +116,10 @@ export function validateVisitBody(body: unknown): VisitInput {
 
   const date = fields.date;
   if (typeof date !== 'string' || !isCalendarDate(date)) {
-    throw new ValidationError('date is required and must be a real date in YYYY-MM-DD form', 'date');
+    throw new ValidationError(
+      'date is required and must be a real date in YYYY-MM-DD form',
+      'date'
+    );
   }
 
   const amountSpent = fields.amountSpent;
@@ -167,7 +170,7 @@ export function validateDateRange(
  * shape; the round trip through Date catches 2026-02-30, which JavaScript
  * would otherwise silently roll into March.
  */
-export function isCalendarDate(value: string): boolean {
+function isCalendarDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split('-').map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
