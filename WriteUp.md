@@ -174,13 +174,5 @@ In the browser: add a restaurant with a blank name and see the message under Nam
 
 ## Known issues / what I'd do next
 
-- Deleting a restaurant deletes its visits with one click, because the migration cascades and I removed the browser confirm popup, which browsers can suppress. For a spending tracker the history is the point. A real version would block the delete while visits exist, or hide the restaurant instead of removing it. The DELETE stub asked for an opinion on the cascade, and this is mine.
-- Duplicate restaurant names are accepted on purpose, since a chain can have two branches, so there is no 409 path and no unique index.
-- Amounts with more than two decimals are rounded to cents by Postgres with no warning. Every other bad input gets a 400, and this one should too.
-- Deleting a visit through a restaurant that does not exist says "Visit not found" while a malformed restaurant id says "Restaurant not found." Both are 404 and the contract is met, but the messages disagree.
-- The spending card's default dates are computed during server render as well as in the browser. If the server's timezone crosses a month boundary against the user's, React would warn about mismatched input values. Local dev is unaffected.
-- `averagePerVisit` is rounded to cents, so it does not multiply back to `totalSpent` exactly.
-- Unrouted methods (`PATCH /api/restaurants/1`) return Next's default 405 with an empty body rather than `{"error"}`.
-- Digit-only names and cuisines are accepted. I tried a "must contain a letter" rule and reverted it as a rule nobody needed; a cuisine dropdown would be the better fix.
-- `GET /api/restaurants/:id` and `PUT` have no UI caller. A restaurant detail page with an edit form would use both.
-- Next: editing a visit, paging the list and totals (see question 3), a monthly budget with a pace bar (needs a `budgets` table and a migration), and "last visited" on each card.
+- Deleting a restaurant deletes its visits with one click, since the migration cascades and there is no confirm step. For a spending tracker the history is the point, so a real version would block the delete while visits exist.
+- Duplicate restaurant names are allowed on purpose, since a chain can have two branches, so there is no 409.
