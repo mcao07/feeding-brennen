@@ -175,4 +175,4 @@ In the browser: add a restaurant with a blank name and see the message under Nam
 ## Known issues / what I'd do next
 
 - Deleting a restaurant deletes its visits with one click, since the migration cascades and there is no confirm step. For a spending tracker the history is the point, so a real version would block the delete while visits exist.
-- Duplicate restaurant names are allowed on purpose, since a chain can have two branches, so there is no 409.
+- Duplicate restaurant names are not rejected. The schema has no unique constraint and I did not add one, since two branches of a chain can share a name, so there is no 409.
