@@ -1,36 +1,30 @@
 # Write-up
 
+> This is the skeleton - replace everything in blockquotes with your own words
+> and delete the prompts as you go. Aim for **~300 words** across the four
+> questions; the route reference below can be as long as it needs to be.
+>
+> Write it like you're handing the work to a teammate. We'd rather read an
+> honest "I ran out of time on X and here's what I'd do" than a polished list of
+> accomplishments. **Submit this even if you didn't finish** - see CHALLENGE.md.
+
 ## 1. What did you build for Part B, and why that?
 
-The README says the app tracks what Brennen spends eating out. The template shipped a `visits` table with an `amountSpent` column, seeded it, wrote a `toVisit()` mapper, and then nothing read any of it. The app could list restaurants and could not answer its own question.
-
-So I built the spending half: log a visit, see what you have spent at each restaurant, and see what you spent across all of them in any date range, with a chart. The visits scaffolding was a hint, and following it meant every endpoint I added had a real consumer on day one.
+> What made you pick it over everything else you could have built? This is the
+> question we care most about - the _why_ matters more than the _what_.
 
 ## 2. What did you decide, and what did you rule out?
 
-**Visits nest under a restaurant.** The restaurant comes from the URL, never the body, and delete carries both ids in its `WHERE`, so one restaurant cannot touch another's visits.
-
-**Totals are computed, never stored.** I ruled out a `totalSpent` column: every visit write would have to update it, and when they disagree you cannot tell which is right. `SUM` over visits on every read cannot drift.
-
-**Totals live on their own endpoint.** My first cut added two keys to every restaurant response. The Part A contract says to match six keys exactly, so I moved them to `GET /api/restaurants/total-spending-and-visit-count`. Two requests instead of one, for an untouched contract. The PR history shows the change of mind.
-
-**The server is the only validator.** The forms have no rules. A 400 names its field and the form places the message under that input. Each error costs a round trip; I took that over a second copy of the rules that drifts.
-
-**Spending is one endpoint, one query.** Every tile, the chart, and the breakdown derive from one list of visits, so they cannot disagree.
-
-**Ruled out:** a chart library, a shared form builder for the two modals, client-side validation, server-side search.
-
-**The tradeoff I am least sure of:** the migration cascades a restaurant delete to its visits. I left it, and the trash icon has no confirm because browsers can suppress `window.confirm`. For a spending tracker the history is the point; a real product would block the delete or soft-delete.
+> Route shapes, data model, where the logic lives, what you deliberately didn't
+> do. Name a tradeoff you're not sure you got right.
 
 ## 3. Where did you cut corners?
 
-With another day, in order:
+> What would you fix first with another day?
 
-1. **Edit a visit.** Fixing a typo in an amount means delete and re-log today.
-2. **Three-decimal amounts round silently** to cents. Every other bad input gets a 400.
-3. **Visit delete messages disagree.** `/99999/visits/1` says "Visit not found," `/abc/visits/1` says "Restaurant not found." Both are 404 and the contract is met.
-4. **Default dates are computed during server render too.** A server timezone that crosses a month boundary against the user's would cause a hydration warning.
-5. `GET /api/restaurants/:id` and `PUT` have no UI caller. A detail page would use both.
+## 4. What should we look at first?
+
+> CHALLENGE.md lists this as the fourth question; the skeleton left it out.
 
 ---
 
@@ -51,6 +45,8 @@ With another day, in order:
 | `GET /api/spending?from=&to=` | Totals, tiles, spend per day, spend per restaurant for an inclusive date window | `200` + summary | `400` with `field` on a missing or malformed date or `from` after `to` |
 
 Every 400 in the app is `{"error": "<message>"}` plus `"field": "<name>"` when the message is about one body field.
+
+The example bodies below were captured against the template's original seed (5 restaurants, 3 visits). The shipped seed is larger, so the shapes are identical and the numbers differ.
 
 **`POST /api/restaurants/:id/visits`**
 
