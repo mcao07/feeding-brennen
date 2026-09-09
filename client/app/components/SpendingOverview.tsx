@@ -6,12 +6,12 @@ import { firstOfMonthIso, formatUsd, localIso, todayIso } from '@/lib/format';
 import type { SpendingSummary } from '@/lib/types';
 import SpendingChart from './SpendingChart';
 
-/** The quick ranges, each computed when clicked so "this month" follows the clock. */
 /** How long typing must pause before a range is fetched. Short enough to feel
  *  live, long enough to skip the half-typed dates a keystroke-by-keystroke
  *  edit passes through. */
 const FETCH_DELAY_MS = 250;
 
+/** The quick ranges, each computed when clicked so "this month" follows the clock. */
 const QUICK_RANGES: { label: string; range: () => { from: string; to: string } }[] = [
   { label: 'This month', range: () => ({ from: firstOfMonthIso(), to: todayIso() }) },
   { label: 'Last month', range: lastMonth },

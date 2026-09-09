@@ -9,6 +9,11 @@ import {
 } from '@/lib/types';
 import { validateDateRange } from '@/lib/validation';
 
+// A GET with nothing to read from the request looks static to Next, which
+// would build it once and serve that snapshot forever under `next start`.
+// The answer changes with every visit, so it must run on every request.
+export const dynamic = 'force-dynamic';
+
 /**
  * The one query behind this endpoint: every visit in the window, joined to its
  * restaurant name. All of the summary's statistics are computed from these rows

@@ -3,6 +3,11 @@ import { pool } from '@/db/pool';
 import { handleError } from '@/lib/errors';
 import { toRestaurantSpend } from '@/lib/types';
 
+// A GET with nothing to read from the request looks static to Next, which
+// would build it once and serve that snapshot forever under `next start`.
+// The answer changes with every visit, so it must run on every request.
+export const dynamic = 'force-dynamic';
+
 /**
  * The one query behind this endpoint. LEFT JOIN keeps a restaurant nobody has
  * visited yet; COALESCE turns its null SUM into 0. Lives here rather than in
