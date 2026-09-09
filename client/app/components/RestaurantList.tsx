@@ -61,14 +61,18 @@ export default function RestaurantList({
                   <h3 className="truncate text-lg font-semibold tracking-tight text-stone-900">
                     {restaurant.name}
                   </h3>
-                  <div className="mt-0.5 truncate text-sm text-stone-500">
-                    {restaurant.cuisine} · {restaurant.address}
-                  </div>
+                  {(restaurant.cuisine || restaurant.address) && (
+                    <div className="mt-0.5 truncate text-sm text-stone-500">
+                      {[restaurant.cuisine, restaurant.address].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-xs font-medium tabular-nums text-stone-700">
-                    {restaurant.rating} ★
-                  </span>
+                  {restaurant.rating !== null && (
+                    <span className="rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-xs font-medium tabular-nums text-stone-700">
+                      {restaurant.rating} ★
+                    </span>
+                  )}
                   <DeleteRestaurantButton id={restaurant.id} name={restaurant.name} />
                 </div>
               </div>
