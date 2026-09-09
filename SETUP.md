@@ -100,7 +100,7 @@ You don't need this to get started - it's here so nothing is a black box.
 | Start the database   | `docker compose up -d`           | Runs PostgreSQL 16 on `localhost:5432`, pre-configured with the right user, password, and database name. |
 | Install dependencies | `npm install` (in `client/`)     | Standard.                                                                                                |
 | Create tables        | `npm run migrate` (in `client/`) | Applies `client/db/migrations/*.sql`. Prints `Applied 1 migration(s).`                                   |
-| Load sample data     | `npm run seed` (in `client/`)    | Loads 5 restaurants and 3 visits. Prints `Seeded 5 restaurants and 3 visits.`                            |
+| Load sample data     | `npm run seed` (in `client/`)    | Loads 12 restaurants and about six months of visits, dated relative to today. Prints `Seeded 12 restaurants and 134 visits.` |
 
 Run any of them individually whenever you need to - re-seed after you've made a
 mess of the data, re-migrate after you add a migration.
