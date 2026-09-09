@@ -36,12 +36,6 @@ lib/validation.ts and lib/errors.ts, since the input rules and error handling fo
 
 ---
 
-## Part A notes
-
-- **A1.** The list query sorted by `createdAt`; the column is `created_at`. Both reads also used `SELECT *`, so `toRestaurant()` saw no `createdAt` key and returned the string `"undefined"` for every date. Every restaurant query now selects columns by name with `created_at AS "createdAt"`, so the mapper never learns the database spelling.
-- **A3.** `HttpError` carries its own status and optional field; `handleError()` has one branch. Unknown errors log server-side and return a generic 500. `parseRestaurantId()` rejects anything that is not a positive integer with a 404, including leading zeros and values past the Postgres integer max. That last case was found by a verification sweep: `/api/restaurants/2147483648` passed the digits check and overflowed inside Postgres as a 500.
-- Malformed ids and missing records both answer 404, as the contract asks. I would lean 400 for a malformed id in a public API so a client can tell a typo from a deleted record.
-
 ## Part B: routes
 
 | Method and path | What it does | Success | Errors |
@@ -86,8 +80,6 @@ The example bodies below were captured against the template's original seed (5 r
   "byRestaurant": [ { "restaurantId": 2, "restaurantName": "Sakura House", "visitCount": 1, "totalSpent": 88 } ]
 }
 ```
-
-**UI.** Each restaurant row shows its total and visit count, a collapsible visit history (loaded on first open), a "Log a visit" modal, and a trash icon per visit. Above the list, a Spending card with From/To pickers, quick ranges, six stat tiles, a bar chart that buckets by day, week, or month and fills empty buckets, and a per-restaurant breakdown. A search box filters restaurants by name. No new dependencies; Inter is loaded through `next/font`.
 
 ## Schema changes
 
@@ -182,13 +174,5 @@ In the browser: add a restaurant with a blank name and see the message under Nam
 
 ## Known issues / what I'd do next
 
-- Deleting a restaurant deletes its visits with one click, because the migration cascades and I removed the browser confirm popup, which browsers can suppress. For a spending tracker the history is the point. A real version would block the delete while visits exist, or hide the restaurant instead of removing it. The DELETE stub asked for an opinion on the cascade, and this is mine.
-- Duplicate restaurant names are accepted on purpose, since a chain can have two branches, so there is no 409 path and no unique index.
-- Amounts with more than two decimals are rounded to cents by Postgres with no warning. Every other bad input gets a 400, and this one should too.
-- Deleting a visit through a restaurant that does not exist says "Visit not found" while a malformed restaurant id says "Restaurant not found." Both are 404 and the contract is met, but the messages disagree.
-- The spending card's default dates are computed during server render as well as in the browser. If the server's timezone crosses a month boundary against the user's, React would warn about mismatched input values. Local dev is unaffected.
-- `averagePerVisit` is rounded to cents, so it does not multiply back to `totalSpent` exactly.
-- Unrouted methods (`PATCH /api/restaurants/1`) return Next's default 405 with an empty body rather than `{"error"}`.
-- Digit-only names and cuisines are accepted. I tried a "must contain a letter" rule and reverted it as a rule nobody needed; a cuisine dropdown would be the better fix.
-- `GET /api/restaurants/:id` and `PUT` have no UI caller. A restaurant detail page with an edit form would use both.
-- Next: editing a visit, paging the list and totals (see question 3), a monthly budget with a pace bar (needs a `budgets` table and a migration), and "last visited" on each card.
+- Deleting a restaurant deletes its visits with one click, since the migration cascades and there is no confirm step. For a spending tracker the history is the point, so a real version would block the delete while visits exist.
+- Duplicate restaurant names are not rejected. The schema has no unique constraint and I did not add one, since two branches of a chain can share a name, so there is no 409.
