@@ -89,6 +89,8 @@ Every 400 in the app is `{"error": "<message>"}` plus `"field": "<name>"` when t
 
 None. `001_create_tables.sql` is as the template shipped it.
 
+The seed changed, though: `db/seed.ts` now loads 12 restaurants and about six months of visits, generated deterministically and dated relative to today, so the spending overview has something to show on first open. `./setup.sh` picks it up; nothing extra to run.
+
 ## How I verified this
 
 There is no test suite, so every endpoint was exercised with `curl` against the running database, three times: after Part A, after the visits API, and a final sweep on `main`. Each run took a `pg_dump` snapshot first and restored it after, so the seed data was never changed by testing. The final sweep ran 101 cases. Every status matched the tables above, every restaurant body had exactly the six contract keys, every 4xx body was `{"error"}` or `{"error","field"}`, no response was a 500, a grep of all 61 error bodies for stack or Postgres text found nothing, and the row counts were unchanged across every batch of 400s.
